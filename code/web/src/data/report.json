@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T16:36:54.835Z",
+  "generated_at": "2026-08-08T16:41:25.423Z",
   "baseline": {
     "name": "sdlc-baseline",
     "enforcement": "warn"
@@ -7,7 +7,7 @@
   "orgs": [
     {
       "org": "ai-outfitter",
-      "scanned_at": "2026-08-08T16:36:57.904Z",
+      "scanned_at": "2026-08-08T16:41:28.542Z",
       "sampling_note": "all 19 repositories",
       "ranking_note": "ranking covers the 11 active catalog/application repos; 8 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -15,12 +15,15 @@
           "name": "link",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T13:28:59Z",
+          "pushed_at": "2026-08-08T16:37:43Z",
           "active": true,
           "role": "catalog",
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -53,6 +56,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
             "dotagents_tree": false,
             "ci_workflows": 5,
             "agent_workflows": [
@@ -84,6 +90,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 3,
             "agent_workflows": [],
@@ -113,6 +122,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -142,6 +154,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -174,6 +189,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 3,
             "agent_workflows": [
@@ -205,6 +223,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -234,6 +255,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -263,6 +287,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -292,6 +319,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -321,6 +351,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 3,
             "agent_workflows": [],
@@ -350,6 +383,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -379,6 +415,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [
@@ -410,6 +449,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -439,6 +481,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -468,6 +513,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -497,6 +545,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -526,6 +577,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -555,6 +609,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -578,9 +635,9 @@
       "milestones": [
         {
           "id": "instructions",
-          "title": "agent instruction files",
+          "title": "contributor docs for humans and agents",
           "status": "met",
-          "evidence": "6/11 ranked repos carry AGENTS.md or CLAUDE.md"
+          "evidence": "6/11 carry AGENTS.md or CLAUDE.md; 3 pair it with CONTRIBUTING.md (2 reference it from AGENTS.md); DESIGN.md in 0"
         },
         {
           "id": "shared-catalog",
@@ -635,7 +692,7 @@
     },
     {
       "org": "Unsupervisedcom",
-      "scanned_at": "2026-08-08T16:36:59.799Z",
+      "scanned_at": "2026-08-08T16:41:30.200Z",
       "sampling_note": "most recently pushed 30 repositories",
       "ranking_note": "ranking covers the 11 active catalog/application repos; 19 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -649,6 +706,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -678,6 +738,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -707,6 +770,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 3,
             "agent_workflows": [],
@@ -739,6 +805,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 39,
             "agent_workflows": [],
@@ -773,6 +842,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 39,
             "agent_workflows": [],
@@ -807,6 +879,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": true,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -836,6 +911,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -865,6 +943,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -894,6 +975,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -923,6 +1007,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 7,
             "agent_workflows": [
@@ -959,6 +1046,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -988,6 +1078,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 3,
             "agent_workflows": [],
@@ -1017,6 +1110,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1046,6 +1142,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1075,6 +1174,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1104,6 +1206,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1133,6 +1238,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1162,6 +1270,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1191,6 +1302,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1220,6 +1334,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 4,
             "agent_workflows": [],
@@ -1249,6 +1366,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -1278,6 +1398,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1307,6 +1430,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1336,6 +1462,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
@@ -1365,6 +1494,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1394,6 +1526,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [],
@@ -1423,6 +1558,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1452,6 +1590,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 12,
             "agent_workflows": [
@@ -1483,6 +1624,9 @@
           "signals": {
             "agents_md": false,
             "claude_md": true,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 4,
             "agent_workflows": [],
@@ -1512,6 +1656,9 @@
           "signals": {
             "agents_md": true,
             "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
@@ -1535,9 +1682,9 @@
       "milestones": [
         {
           "id": "instructions",
-          "title": "agent instruction files",
+          "title": "contributor docs for humans and agents",
           "status": "met",
-          "evidence": "11/11 ranked repos carry AGENTS.md or CLAUDE.md"
+          "evidence": "11/11 carry AGENTS.md or CLAUDE.md; 2 pair it with CONTRIBUTING.md (0 reference it from AGENTS.md); DESIGN.md in 0"
         },
         {
           "id": "shared-catalog",

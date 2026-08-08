@@ -12,6 +12,14 @@ export const LEVEL_NAMES = [
 export const Signals = z.object({
   agents_md: z.boolean(),
   claude_md: z.boolean(),
+  // The contributor-docs convention: CONTRIBUTING.md carries the shared
+  // contributor docs for humans and agents, AGENTS.md stays light and
+  // references it, DESIGN.md governs frontend and generated documents.
+  contributing_md: z.boolean(),
+  design_md: z.boolean(),
+  // True when AGENTS.md references CONTRIBUTING.md; only meaningful when
+  // both files exist.
+  agents_links_contributing: z.boolean(),
   dotagents_tree: z.boolean(),
   ci_workflows: z.number().int().min(0),
   agent_workflows: z.array(z.string()),

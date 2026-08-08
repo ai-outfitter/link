@@ -59,7 +59,7 @@ async function ghJson<T>(args: string[]): Promise<T | null> {
   }
 }
 
-function classifySignals(paths: string[]): Signals {
+function classifySignals(paths: string[], agentsMdBody: string | null): Signals {
   const has = (p: string) => paths.includes(p);
   const ciWorkflows = paths.filter(
     (p) => p.startsWith(".github/workflows/") && /\.ya?ml$/.test(p),
@@ -80,6 +80,10 @@ function classifySignals(paths: string[]): Signals {
   return Signals.parse({
     agents_md: has("AGENTS.md"),
     claude_md: has("CLAUDE.md"),
+    contributing_md: has("CONTRIBUTING.md"),
+    design_md: has("DESIGN.md"),
+    agents_links_contributing:
+      agentsMdBody !== null && /CONTRIBUTING\.md/i.test(agentsMdBody),
     dotagents_tree: paths.some((p) => p.startsWith(".agents/")),
     ci_workflows: ciWorkflows.length,
     agent_workflows: ciWorkflows
@@ -184,11 +188,21 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
   return [
     {
       id: "instructions",
-      title: "agent instruction files",
+      title: "contributor docs for humans and agents",
       status: instr.length > 0 ? "met" : "unmet",
       evidence:
         instr.length > 0
-          ? `${instr.length}/${ranked.length} ranked repos carry AGENTS.md or CLAUDE.md`
+          ? (() => {
+              const contributing = ranked.filter((r) => r.signals.contributing_md);
+              const linked = ranked.filter((r) => r.signals.agents_links_contributing);
+              const design = ranked.filter((r) => r.signals.design_md);
+              return (
+                `${instr.length}/${ranked.length} carry AGENTS.md or CLAUDE.md; ` +
+                `${contributing.length} pair it with CONTRIBUTING.md` +
+                (contributing.length > 0 ? ` (${linked.length} reference it from AGENTS.md)` : "") +
+                `; DESIGN.md in ${design.length}`
+              );
+            })()
           : "no ranked repo carries AGENTS.md or CLAUDE.md",
     },
     {
@@ -269,7 +283,17 @@ async function scanRepo(
     `repos/${org}/${listing.name}/git/trees/${branch}?recursive=1`,
   ]);
   const paths = (tree?.tree ?? []).map((e) => e.path);
-  const signals = classifySignals(paths);
+  // One content fetch, only where the convention check is meaningful:
+  // does AGENTS.md reference CONTRIBUTING.md?
+  let agentsMdBody: string | null = null;
+  if (paths.includes("AGENTS.md") && paths.includes("CONTRIBUTING.md")) {
+    const file = await ghJson<{ content?: string }>([
+      "api",
+      `repos/${org}/${listing.name}/contents/AGENTS.md`,
+    ]);
+    if (file?.content) agentsMdBody = Buffer.from(file.content, "base64").toString("utf8");
+  }
+  const signals = classifySignals(paths, agentsMdBody);
   const rules = await ghJson<any[]>([
     "api",
     `repos/${org}/${listing.name}/rules/branches/${branch}`,

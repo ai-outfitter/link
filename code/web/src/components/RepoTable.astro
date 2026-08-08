@@ -9,7 +9,7 @@ const no = "—";
     <tr>
       <th>repo</th>
       <th>level</th>
-      <th>AGENTS.md</th>
+      <th title="AGENTS.md · CONTRIBUTING.md · DESIGN.md">docs A·C·D</th>
       <th>.agents/</th>
       <th>agent workflows</th>
       <th>baseline</th>
@@ -28,7 +28,18 @@ const no = "—";
             {repo.level} {repo.level_name}
           </span>
         </td>
-        <td>{repo.signals.agents_md || repo.signals.claude_md ? yes : no}</td>
+        <td class="docs-cell">
+          <span
+            class:list={[{ dimmed: !(repo.signals.agents_md || repo.signals.claude_md) }]}
+            title={repo.signals.agents_links_contributing
+              ? "AGENTS.md references CONTRIBUTING.md"
+              : "AGENTS.md"}
+          >
+            A{repo.signals.agents_links_contributing ? "@" : ""}
+          </span>
+          <span class:list={[{ dimmed: !repo.signals.contributing_md }]} title="CONTRIBUTING.md">C</span>
+          <span class:list={[{ dimmed: !repo.signals.design_md }]} title="DESIGN.md">D</span>
+        </td>
         <td>{repo.signals.dotagents_tree ? yes : no}</td>
         <td>
           {repo.signals.agent_workflows.length === 0 &&
