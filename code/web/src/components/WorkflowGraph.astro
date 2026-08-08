@@ -4,158 +4,191 @@ import { buildGraph, type GNode } from "../lib/workflow-graph.ts";
 const { doc } = Astro.props;
 const graph = buildGraph(doc);
 
-const NODE_W = 190;
-const ROW_H = 96;
-const PAD = 24;
-const COL_X = [PAD + 90, PAD + 90 + 300];
-const LEFT_LANE = PAD; // dashed data edges run in this lane
-
-const nodeH = (n: GNode) => 30 + n.sub.length * 13;
-const x = (n: GNode) => COL_X[n.col];
-const y = (n: GNode) => PAD + n.row * ROW_H;
-const byId = new Map(graph.nodes.map((n) => [n.id, n]));
-
-const width = COL_X[graph.cols - 1] + NODE_W + PAD + 40;
-const height = PAD + (graph.rows - 1) * ROW_H + 80;
-
 const flow = graph.edges.filter((e) => e.kind === "flow");
 const routes = graph.edges.filter((e) => e.kind === "route");
-const data = graph.edges.filter((e) => e.kind === "data");
+// Shortest spans take the inner lanes so wires nest without crossing.
+const data = graph.edges
+  .map((e, i) => ({ ...e, i }))
+  .filter((e) => e.kind === "data");
+
+const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+const span = (e: { from: string; to: string }) =>
+  Math.abs((byId.get(e.to)?.row ?? 0) - (byId.get(e.from)?.row ?? 0));
+data.sort((a, b) => span(a) - span(b));
+
+const NODE_W = 210;
+const ROW_H = 100;
+const PAD = 14;
+const LANE_W = 17;
+const laneX = (lane: number) => PAD + 8 + lane * LANE_W;
+const COL0 = PAD + 8 + data.length * LANE_W + 30;
+const COL1 = COL0 + NODE_W + 130;
+
+const nodeH = (n: GNode) => (n.sub.length > 0 ? 30 + n.sub.length * 13 : 28);
+const x = (n: GNode) => (n.col === 0 ? COL0 : COL1);
+const y = (n: GNode) => PAD + 6 + n.row * ROW_H;
+
+const width = (graph.cols > 1 ? COL1 : COL0) + NODE_W + PAD + 6;
+const height = PAD + 12 + (graph.rows - 1) * ROW_H + 72;
 
 const facetColor: Record<string, string> = {
-  signal: "#5b8dd6",
-  decision: "#c08a2d",
-  review: "#9a6bd0",
-  terminal: "#3d9d6a",
+  signal: "var(--signal)",
+  decision: "var(--decision)",
+  review: "var(--review)",
+  terminal: "var(--terminal)",
 };
-const nodeStroke = (n: GNode) =>
-  n.facets.length > 0 ? facetColor[n.facets[0]] : "currentColor";
+const accent = (n: GNode) => (n.facets.length > 0 ? facetColor[n.facets[0]] : "var(--faint)");
+const R = 7; // wire corner radius
 ---
 
 <svg
   viewBox={`0 0 ${width} ${height}`}
   width={width}
   role="img"
-  aria-label={`Process graph for ${doc.name}`}
+  aria-label={`Process DAG for ${doc.name}`}
   class="wf-graph"
 >
   <defs>
-    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.7"></path>
+    <marker id="arrow" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0.6 L7.4,4 L0,7.4 z" fill="var(--dim)"></path>
+    </marker>
+    <marker id="arrow-route" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0.6 L7.4,4 L0,7.4 z" fill="var(--terminal)"></path>
     </marker>
   </defs>
+
+  {/* typed data wires: orthogonal, one lane per wire, nested left of the spine */}
+  {data.map((e, lane) => {
+    const a = byId.get(e.from)!;
+    const b = byId.get(e.to)!;
+    const lx = laneX(data.length - 1 - lane);
+    const y1 = y(a) + nodeH(a) - 9 - (lane % 3) * 5;
+    const y2 = y(b) + 14 + (lane % 3) * 5;
+    const midY = y1 + (y2 - y1) * (0.3 + (lane % 3) * 0.2);
+    return (
+      <g class="wire">
+        <path
+          d={`M ${x(a)} ${y1} H ${lx + R} Q ${lx} ${y1} ${lx} ${y1 + R} V ${y2 - R} Q ${lx} ${y2} ${lx + R} ${y2} H ${x(b) - 2}`}
+          fill="none"
+          stroke="var(--faint)"
+          stroke-width="1"
+          marker-end="url(#arrow)"
+        />
+        <rect x={lx - 5} y={midY - 7} width="10" height={7 + (e.label?.length ?? 0) * 5.4} fill="var(--bg)" transform={`rotate(90 ${lx} ${midY})`} opacity="0"></rect>
+        <text x={lx} y={midY} class="wire-label" transform={`rotate(-90 ${lx} ${midY})`} text-anchor="middle" dy="3">
+          {e.label}
+        </text>
+      </g>
+    );
+  })}
 
   {/* control-flow spine */}
   {flow.map((e) => {
     const a = byId.get(e.from)!;
     const b = byId.get(e.to)!;
-    const x1 = x(a) + NODE_W / 2;
+    const cx = x(a) + NODE_W / 2;
     const y1 = y(a) + nodeH(a);
-    const y2 = y(b);
+    const y2 = y(b) - 2;
     return (
       <g>
-        <line x1={x1} y1={y1} x2={x1} y2={y2} stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)" opacity="0.75" />
+        <line x1={cx} y1={y1} x2={cx} y2={y2} stroke="var(--dim)" stroke-width="1.2" marker-end="url(#arrow)" />
         {e.label && (
-          <text x={x1 + 7} y={(y1 + y2) / 2 + 3} class="edge-label">{e.label}</text>
+          <text x={cx + 8} y={(y1 + y2) / 2 + 3.5} class="edge-label">{e.label}</text>
         )}
       </g>
     );
   })}
 
-  {/* declared routes to terminals */}
+  {/* declared routes, elbowed to the terminal column */}
   {routes.map((e) => {
     const a = byId.get(e.from)!;
     const b = byId.get(e.to)!;
     const x1 = x(a) + NODE_W;
     const y1 = y(a) + nodeH(a) / 2;
-    const x2 = x(b);
+    const x2 = x(b) - 2;
     const y2 = y(b) + nodeH(b) / 2;
-    const mx = (x1 + x2) / 2;
+    const mx = x1 + 52;
     return (
       <g>
         <path
-          d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+          d={`M ${x1} ${y1} H ${mx - R} Q ${mx} ${y1} ${mx} ${y1 + R} V ${y2 - R} Q ${mx} ${y2} ${mx + R} ${y2} H ${x2}`}
           fill="none"
-          stroke={facetColor.terminal}
-          stroke-width="1.3"
-          marker-end="url(#arrow)"
+          stroke="var(--terminal)"
+          stroke-width="1.2"
+          marker-end="url(#arrow-route)"
         />
-        <text x={mx} y={Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 6} text-anchor="middle" class="edge-label route">
-          {e.label}
-        </text>
-      </g>
-    );
-  })}
-
-  {/* typed data handoffs (with:, runs-on:) in the left lane */}
-  {data.map((e, i) => {
-    const a = byId.get(e.from)!;
-    const b = byId.get(e.to)!;
-    const lane = LEFT_LANE + 66 - (i % 5) * 15;
-    const y1 = y(a) + nodeH(a) / 2;
-    const y2 = y(b) + nodeH(b) / 2 - 6 + (i % 3) * 6;
-    const labelY = (y1 + y2) / 2 - 3 + (i % 3) * 11;
-    return (
-      <g opacity="0.65">
-        <path
-          d={`M ${x(a)} ${y1} C ${lane} ${y1}, ${lane} ${y2}, ${x(b)} ${y2}`}
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1"
-          stroke-dasharray="4 3"
-          marker-end="url(#arrow)"
-        />
-        <text x={lane - 2} y={labelY} text-anchor="middle" class="edge-label">
-          {e.label}
-        </text>
+        <text x={mx + 8} y={y1 + (y2 - y1) / 2 + 3} class="edge-label route">{e.label}</text>
       </g>
     );
   })}
 
   {/* task nodes */}
-  {graph.nodes.map((n) => (
-    <g>
-      <rect
-        x={x(n)}
-        y={y(n)}
-        width={NODE_W}
-        height={nodeH(n)}
-        rx="7"
-        fill="transparent"
-        stroke={nodeStroke(n)}
-        stroke-width="1.4"
-      />
-      <text x={x(n) + 10} y={y(n) + 17} class="node-title">
-        {n.label}
-      </text>
-      {n.facets.length > 0 && (
-        <text x={x(n) + NODE_W - 8} y={y(n) + 16} text-anchor="end" class="facets" fill={nodeStroke(n)}>
-          {n.facets.join(" · ")}
+  {graph.nodes.map((n) => {
+    const h = nodeH(n);
+    const terminalOnly = n.kind === "emit";
+    return (
+      <g>
+        <rect
+          x={x(n)}
+          y={y(n)}
+          width={NODE_W}
+          height={h}
+          rx={terminalOnly ? h / 2 : 2}
+          fill="var(--panel-2)"
+          stroke={terminalOnly ? "var(--terminal)" : "var(--line)"}
+          stroke-width="1"
+          stroke-dasharray={n.kind === "signal" ? "5 3" : undefined}
+        />
+        {!terminalOnly && n.kind !== "signal" && (
+          <rect x={x(n)} y={y(n)} width="3" height={h} fill={accent(n)} />
+        )}
+        <text x={x(n) + (terminalOnly ? 18 : 12)} y={y(n) + 17.5} class="node-title">
+          {n.label}
         </text>
-      )}
-      {n.sub.map((line, i) => (
-        <text x={x(n) + 10} y={y(n) + 30 + i * 13} class="node-sub">
-          {line}
-        </text>
-      ))}
-    </g>
-  ))}
+        {n.facets.length > 0 && !terminalOnly && (
+          <text x={x(n) + NODE_W - 9} y={y(n) + 17} text-anchor="end" class="facet-tag" fill={accent(n)}>
+            {n.facets.join(" · ")}
+          </text>
+        )}
+        {n.sub.map((line, i) => (
+          <text x={x(n) + 12} y={y(n) + 30.5 + i * 13} class="node-sub">
+            {line}
+          </text>
+        ))}
+      </g>
+    );
+  })}
 </svg>
 
-<p class="dim legend">
-  facets:
+<p class="legend">
   {Object.entries(facetColor).map(([facet, color]) => (
-    <span style={`color:${color}`}>■ {facet} </span>
+    <span><span class="swatch" style={`background:${color}`}></span>{facet}</span>
   ))}
-  &middot; solid = control flow &middot; green curve = declared route &middot; dashed = typed data handoff (<code>with:</code>)
+  <span class="sep">│</span>
+  <span>─ control flow</span>
+  <span style="color:var(--terminal)">─ declared route</span>
+  <span>┄ typed handoff</span>
 </p>
 
 <style>
-  .wf-graph { max-width: 100%; height: auto; display: block; margin: 0.5rem 0; }
-  .node-title { font: 600 12px ui-monospace, monospace; fill: currentColor; }
-  .node-sub { font: 10px ui-monospace, monospace; fill: currentColor; opacity: 0.6; }
-  .facets { font: 9px system-ui, sans-serif; }
-  .edge-label { font: 10px ui-monospace, monospace; fill: currentColor; opacity: 0.75; }
-  .edge-label.route { fill: #3d9d6a; opacity: 1; }
-  .legend { font-size: 0.8em; }
+  .wf-graph { max-width: 100%; height: auto; display: block; margin: 0.75rem 0 0.25rem; }
+  .node-title { font: 600 12px var(--mono); fill: var(--text); }
+  .node-sub { font: 10px var(--mono); fill: var(--dim); }
+  .facet-tag { font: 500 8.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .edge-label { font: 10px var(--mono); fill: var(--dim); }
+  .edge-label.route { fill: var(--terminal); }
+  .wire-label { font: 9px var(--mono); fill: var(--faint); letter-spacing: 0.04em; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    align-items: center;
+    color: var(--dim);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0.25rem 0 1.25rem;
+  }
+  .legend .swatch { display: inline-block; width: 8px; height: 8px; margin-right: 0.4em; }
+  .legend .sep { color: var(--hairline); }
 </style>

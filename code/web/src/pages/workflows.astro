@@ -6,87 +6,133 @@ import workflows from "../data/workflows.json";
 
 const digest = (raw: string) =>
   createHash("sha256").update(raw).digest("hex").slice(0, 12);
+
+// `${{ steps.plan.output }}` -> `steps.plan.output`
+const ref = (value: unknown): string =>
+  typeof value === "string" ? value.replace(/\$\{\{\s*/g, "").replace(/\s*\}\}/g, "") : String(value);
+
+const triggerParts = (on: Record<string, any>): string[] => {
+  const [event, config] = Object.entries(on)[0] ?? ["event", {}];
+  const parts = [event as string];
+  for (const [key, value] of Object.entries(config ?? {})) {
+    parts.push(`${key} ${Array.isArray(value) ? value.join(", ") : value}`);
+  }
+  return parts;
+};
+
+const ifParts = (expr: string) => {
+  const m = expr.match(/(.+?)\s*==\s*'([^']*)'/);
+  return m ? { subject: ref(m[1]), value: m[2] } : { subject: ref(expr), value: "" };
+};
 ---
 
 <Base title="Agent workflows">
   <h1>Defined workflows</h1>
   <p class="dim">
-    The catalog's <code>agent-workflow/v1</code> definitions, rendered from
-    <code>workflows/</code>. Schema-validated in CI; no runtime executes them yet.
+    The catalog's <code>agent-workflow/v1</code> definitions, compiled to their
+    process DAGs. Schema-validated in CI; no runtime executes them yet.
   </p>
 
   {
     workflows.map(({ file, raw, doc }) => (
       <section class="card">
-        <h2 style="margin-top:0">
-          {doc.name} <span class="dim">({file})</span>
-        </h2>
-        <p class="dim">
-          on: <code>{JSON.stringify(doc.on)}</code> &middot; source digest{" "}
-          <code>sha256:{digest(raw)}</code>
+        <header class="wf-head">
+          <h2>{doc.name}</h2>
+          <span class="digest">
+            {file} · sha256:{digest(raw)}
+          </span>
+        </header>
+        <p class="trigger-line">
+          {triggerParts(doc.on).map((part, i) => (
+            <>
+              {i > 0 && <span class="tsep">·</span>}
+              <span class:list={[i === 0 ? "tevent" : "tcond"]}>{part}</span>
+            </>
+          ))}
         </p>
 
         <WorkflowGraph doc={doc} />
 
-        <table>
-          <thead>
-            <tr>
-              <th>step</th>
-              <th>does</th>
-              <th>inputs / routing</th>
-            </tr>
-          </thead>
-          <tbody>
-            {doc.steps.map((step, index) => (
-              <tr>
-                <td>
-                  <code>{step.id ?? `#${index + 1}`}</code>
-                </td>
-                <td>
-                  {step.agent && (
-                    <span>
-                      agent <code>{step.agent}</code>
-                    </span>
-                  )}
-                  {step.run && <code>{step.run}</code>}
-                  {step.emit && (
-                    <span>
-                      emit <code>{JSON.stringify(step.emit)}</code>
-                    </span>
-                  )}
-                </td>
-                <td>
-                  {step.if && (
-                    <div>
-                      if <code>{step.if}</code>
-                    </div>
-                  )}
-                  {step.with && (
-                    <div>
-                      with <code>{JSON.stringify(step.with)}</code>
-                    </div>
-                  )}
-                  {step["posts-to"] && (
-                    <div>
-                      posts-to <code>{step["posts-to"]}</code>
-                    </div>
-                  )}
-                  {step["runs-on"] && (
-                    <div>
-                      runs-on <code>{step["runs-on"]}</code>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ol class="steps">
+          {doc.steps.map((step) => (
+            <li>
+              <div class="step-head">
+                <code class="step-id">{step.id ?? `emit ${(step.emit as any)?.status ?? ""}`}</code>
+                {step.agent && <span class="does">agent <code>{step.agent}</code></span>}
+                {step.run && <span class="does">run <code>{step.run}</code></span>}
+              </div>
+              <div class="step-detail">
+                {step.if && (
+                  <span class="kv route-kv">
+                    when <code>{ifParts(step.if).subject}</code> = <code>{ifParts(step.if).value}</code>
+                  </span>
+                )}
+                {Object.entries(step.with ?? {}).map(([name, value]) => (
+                  <span class="kv">
+                    {name} ← <code>{ref(value)}</code>
+                  </span>
+                ))}
+                {step["runs-on"] && (
+                  <span class="kv">runs-on ← <code>{ref(step["runs-on"])}</code></span>
+                )}
+                {step["posts-to"] && (
+                  <span class="kv">posts-to → <code>{ref(step["posts-to"])}</code></span>
+                )}
+                {step.reviewers && (
+                  <span class="kv">reviewers <code>{step.reviewers.join(", ")}</code></span>
+                )}
+                {step.emit && (
+                  <span class="kv emit-kv">
+                    emit <span class="badge pass">{(step.emit as any).status}</span>
+                    {(step.emit as any).summary && (
+                      <span class="dim"> “{ref((step.emit as any).summary)}”</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
 
         <details>
-          <summary class="dim">source</summary>
+          <summary>yaml source</summary>
           <pre>{raw}</pre>
         </details>
       </section>
     ))
   }
 </Base>
+
+<style>
+  .wf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .digest { color: var(--faint); font-size: 0.72rem; letter-spacing: 0.04em; }
+  .trigger-line { margin: 0.1rem 0 0; color: var(--dim); font-size: 0.82rem; }
+  .tevent { color: var(--signal); font-weight: 600; }
+  .tsep { color: var(--faint); margin: 0 0.5em; }
+  .steps { list-style: none; counter-reset: step; margin: 0.5rem 0 1.25rem; padding: 0; }
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 15rem 1fr;
+    gap: 0.35rem 1.25rem;
+    padding: 0.55rem 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .steps li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    margin-left: -2.1rem;
+    color: var(--faint);
+    font-size: 0.7rem;
+    padding-top: 0.15rem;
+  }
+  .step-head { display: flex; flex-direction: column; gap: 0.1rem; }
+  .step-id { font-weight: 600; }
+  .does { color: var(--dim); font-size: 0.78rem; }
+  .step-detail { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; align-content: start; font-size: 0.78rem; color: var(--dim); }
+  .kv code { color: var(--text); }
+  .route-kv code:last-child { color: var(--terminal); }
+  @media (max-width: 720px) {
+    .steps li { grid-template-columns: 1fr; }
+  }
+</style>
