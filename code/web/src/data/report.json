@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T04:01:31.727Z",
+  "generated_at": "2026-08-08T04:35:12.247Z",
   "baseline": {
     "name": "sdlc-baseline",
     "enforcement": "warn"
@@ -7,15 +7,93 @@
   "orgs": [
     {
       "org": "ai-outfitter",
-      "scanned_at": "2026-08-08T04:01:34.919Z",
+      "scanned_at": "2026-08-08T04:35:15.299Z",
       "sampling_note": "all 19 repositories",
       "ranking_note": "ranking covers the 12 repos pushed within 7 days; 7 inactive repos are listed but not ranked",
       "repos": [
         {
+          "name": ".agents",
+          "visibility": "public",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:34:46Z",
+          "active": true,
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "unknown",
+              "note": "no agent workflows found, gate not applicable yet"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": ".github",
+          "visibility": "public",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:32:18Z",
+          "active": true,
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "unknown",
+              "note": "no agent workflows found, gate not applicable yet"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
           "name": "link",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T03:49:36Z",
+          "pushed_at": "2026-08-08T04:02:20Z",
           "active": true,
           "signals": {
             "agents_md": false,
@@ -209,84 +287,6 @@
           ],
           "level": 3,
           "level_name": "automated"
-        },
-        {
-          "name": ".agents",
-          "visibility": "public",
-          "default_branch": "main",
-          "pushed_at": "2026-08-07T20:35:07Z",
-          "active": true,
-          "signals": {
-            "agents_md": true,
-            "claude_md": true,
-            "dotagents_tree": false,
-            "ci_workflows": 0,
-            "agent_workflows": [],
-            "docs": "thin"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "unknown",
-              "note": "no agent workflows found, gate not applicable yet"
-            }
-          ],
-          "level": 1,
-          "level_name": "assisted"
-        },
-        {
-          "name": ".github",
-          "visibility": "public",
-          "default_branch": "main",
-          "pushed_at": "2026-08-07T20:35:05Z",
-          "active": true,
-          "signals": {
-            "agents_md": false,
-            "claude_md": false,
-            "dotagents_tree": false,
-            "ci_workflows": 0,
-            "agent_workflows": [],
-            "docs": "thin"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "unknown",
-              "note": "no agent workflows found, gate not applicable yet"
-            }
-          ],
-          "level": 0,
-          "level_name": "none"
         },
         {
           "name": "wiki",
@@ -769,10 +769,51 @@
     },
     {
       "org": "Unsupervisedcom",
-      "scanned_at": "2026-08-08T04:01:36.688Z",
+      "scanned_at": "2026-08-08T04:35:16.998Z",
       "sampling_note": "most recently pushed 30 repositories",
       "ranking_note": "ranking covers the 11 repos pushed within 7 days; 19 inactive repos are listed but not ranked",
       "repos": [
+        {
+          "name": ".agents",
+          "visibility": "internal",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:34:55Z",
+          "active": true,
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "dotagents_tree": false,
+            "ci_workflows": 3,
+            "agent_workflows": [
+              "publish-agent-image.yml"
+            ],
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "agent workflows present but no session-capture landing gate found"
+            }
+          ],
+          "level": 2,
+          "level_name": "delegated"
+        },
         {
           "name": "tarot",
           "visibility": "private",
@@ -811,47 +852,6 @@
           ],
           "level": 1,
           "level_name": "assisted"
-        },
-        {
-          "name": ".agents",
-          "visibility": "internal",
-          "default_branch": "main",
-          "pushed_at": "2026-08-07T23:07:37Z",
-          "active": true,
-          "signals": {
-            "agents_md": true,
-            "claude_md": true,
-            "dotagents_tree": false,
-            "ci_workflows": 3,
-            "agent_workflows": [
-              "publish-agent-image.yml"
-            ],
-            "docs": "thin"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "fail",
-              "note": "agent workflows present but no session-capture landing gate found"
-            }
-          ],
-          "level": 2,
-          "level_name": "delegated"
         },
         {
           "name": "mainapp-exp-ref",
