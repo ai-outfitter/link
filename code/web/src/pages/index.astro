@@ -1,16 +1,41 @@
 ---
 import Base from "../layouts/Base.astro";
 import RepoTable from "../components/RepoTable.astro";
-import report from "../data/report.json";
+import { loadReport, loadSources } from "../lib/server-data.ts";
 import "../styles/report.css";
+
+export const prerender = false;
+
+const report = loadReport();
+const sources = loadSources();
 ---
 
 <Base title="SDLC report">
   <h1>Organization SDLC report</h1>
   <p class="dim">
-    Generated {report.generated_at} &middot; audited against governance baseline
-    <code>{report.baseline.name}</code> (enforcement: {report.baseline.enforcement})
+    Generated {report?.generated_at ?? "never"} &middot; audited against governance baseline
+    <code>{report?.baseline.name}</code> (enforcement: {report?.baseline.enforcement})
   </p>
+
+  <section class="sources-panel">
+    <form id="add-source-form">
+      <input
+        id="source-target"
+        name="target"
+        placeholder="github org, or a local folder path (~/repos/ncrmro)"
+        autocomplete="off"
+      />
+      <button type="submit">add source</button>
+      <button type="button" id="rescan">rescan</button>
+      <span id="scan-status" class="dim"></span>
+    </form>
+    <p class="dim registered">
+      registered: {sources.length === 0 && <span>none (defaults only)</span>}
+      {sources.map((source) => <code data-source={source.target}>{source.target}</code>)}
+      &middot; <span>~/repos/ai-outfitter always included</span>
+    </p>
+  </section>
+  <script src="../scripts/sources.ts"></script>
 
   {
     report.orgs.map((org) => {

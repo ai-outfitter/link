@@ -2,8 +2,12 @@
 import { createHash } from "node:crypto";
 import Base from "../layouts/Base.astro";
 import WorkflowGraph from "../components/WorkflowGraph.astro";
-import workflows from "../data/workflows.json";
+import { loadWorkflows } from "../lib/server-data.ts";
 import "../styles/workflows.css";
+
+export const prerender = false;
+
+const workflows = loadWorkflows();
 
 const digest = (raw: string) =>
   createHash("sha256").update(raw).digest("hex").slice(0, 12);

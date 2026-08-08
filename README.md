@@ -22,7 +22,9 @@ npx @ai-outfitter/link web
 `report` writes the audit; `web` serves it at `http://localhost:4321` — `/`
 is the organization report, `/workflows` renders each `agent-workflow/v1`
 definition with its steps, `with:` handoffs, `posts-to:` targets, and YAML
-source. With [Bun](https://bun.sh) installed, `bunx` works the same and
+source. The report page manages sources directly: add a GitHub org or a
+local folder in the form and rescan — the same XDG registry the CLI uses,
+served by API routes on the local server. With [Bun](https://bun.sh) installed, `bunx` works the same and
 starts faster.
 
 Pin a version in automation — an unpinned run executes whatever the latest

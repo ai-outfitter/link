@@ -1,3 +1,53 @@
+.sources-panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 0.8rem 1rem;
+  margin: 1rem 0 0;
+}
+.sources-panel form {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sources-panel input {
+  flex: 1 1 22rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font: inherit;
+  padding: 0.35rem 0.6rem;
+}
+.sources-panel input:focus {
+  outline: none;
+  border-color: var(--signal);
+}
+.sources-panel button {
+  background: transparent;
+  border: 1px solid var(--faint);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+.sources-panel button:hover {
+  border-color: var(--signal);
+}
+.sources-panel button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+.sources-panel .registered {
+  margin: 0.6rem 0 0;
+  font-size: 0.75rem;
+}
+.sources-panel .registered code {
+  margin-right: 0.7em;
+}
+
 .milestones {
   list-style: none;
   margin: 0.75rem 0 1.25rem;

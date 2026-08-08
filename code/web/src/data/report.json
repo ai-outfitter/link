@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T16:53:43.913Z",
+  "generated_at": "2026-08-08T17:06:14.588Z",
   "baseline": {
     "name": "sdlc-baseline",
     "enforcement": "warn"
@@ -8,7 +8,7 @@
     {
       "org": "/home/ncrmro/repos/ai-outfitter",
       "source_type": "folder",
-      "scanned_at": "2026-08-08T16:53:43.961Z",
+      "scanned_at": "2026-08-08T17:06:14.625Z",
       "sampling_note": "19 local checkouts under /home/ncrmro/repos/ai-outfitter",
       "ranking_note": "ranking covers the 9 active catalog/application repos; 10 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -586,7 +586,7 @@
           "name": "link",
           "visibility": "local",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T11:42:02-05:00",
+          "pushed_at": "2026-08-08T11:55:21-05:00",
           "active": true,
           "role": "catalog",
           "signals": {
@@ -718,7 +718,7 @@
     {
       "org": "ai-outfitter",
       "source_type": "github-org",
-      "scanned_at": "2026-08-08T16:53:46.849Z",
+      "scanned_at": "2026-08-08T17:06:17.531Z",
       "sampling_note": "all 19 repositories",
       "ranking_note": "ranking covers the 11 active catalog/application repos; 8 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -726,7 +726,7 @@
           "name": "link",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T16:42:03Z",
+          "pushed_at": "2026-08-08T16:55:22Z",
           "active": true,
           "role": "catalog",
           "signals": {
@@ -1429,7 +1429,7 @@
     {
       "org": "Unsupervisedcom",
       "source_type": "github-org",
-      "scanned_at": "2026-08-08T16:53:48.741Z",
+      "scanned_at": "2026-08-08T17:06:19.339Z",
       "sampling_note": "most recently pushed 30 repositories",
       "ranking_note": "ranking covers the 11 active catalog/application repos; 19 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -2513,7 +2513,7 @@
     {
       "org": "/home/ncrmro/repos/ncrmro/.agents",
       "source_type": "folder",
-      "scanned_at": "2026-08-08T16:53:46.870Z",
+      "scanned_at": "2026-08-08T17:06:17.537Z",
       "sampling_note": "1 local checkouts under /home/ncrmro/repos/ncrmro/.agents",
       "ranking_note": "ranking covers the 1 active catalog/application repos; 0 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -2617,7 +2617,7 @@
     {
       "org": "/home/ncrmro/repos/ks.systems/vega",
       "source_type": "folder",
-      "scanned_at": "2026-08-08T16:53:46.881Z",
+      "scanned_at": "2026-08-08T17:06:17.544Z",
       "sampling_note": "1 local checkouts under /home/ncrmro/repos/ks.systems/vega",
       "ranking_note": "ranking covers the 1 active catalog/application repos; 0 inactive or meta repos are listed but not ranked",
       "repos": [
@@ -2679,6 +2679,1020 @@
           "title": "catalog consumed by application repos",
           "status": "met",
           "evidence": "1 application repos carry a dotagents payload (vega)"
+        },
+        {
+          "id": "triggered-agents",
+          "title": "triggered agent automation",
+          "status": "unmet",
+          "evidence": "no CI-triggered agent workflow or forge coding agent found"
+        },
+        {
+          "id": "protected-landing",
+          "title": "protection where agents land changes",
+          "status": "unmet",
+          "evidence": "no change-landing agent automation exists yet (triage does not land code)"
+        },
+        {
+          "id": "session-capture",
+          "title": "session capture before landing",
+          "status": "unmet",
+          "evidence": "no session-capture landing gate detected; becomes scannable once workflows upload session artifacts behind a required check"
+        },
+        {
+          "id": "bot-identity",
+          "title": "capped agent identity (bot app)",
+          "status": "unknown",
+          "evidence": "org-level GitHub App configuration is not scanned; verify and record manually"
+        },
+        {
+          "id": "strict-governance",
+          "title": "governance enforcement at strict",
+          "status": "unmet",
+          "evidence": "sdlc-baseline enforcement: warn"
+        }
+      ],
+      "org_level": 1,
+      "org_level_name": "assisted",
+      "gaps": [
+        "level 2 blocked — governed shared catalog: no repo carries validated workflow definitions beside a governance policy"
+      ]
+    },
+    {
+      "org": "/home/ncrmro/repos/ncrmro",
+      "source_type": "folder",
+      "scanned_at": "2026-08-08T17:06:17.660Z",
+      "sampling_note": "28 local checkouts under /home/ncrmro/repos/ncrmro",
+      "ranking_note": "ranking covers the 5 active catalog/application repos; 23 inactive or meta repos are listed but not ranked",
+      "repos": [
+        {
+          "name": "catalyst",
+          "visibility": "local",
+          "default_branch": "chore/devenv-2",
+          "pushed_at": "2026-06-12T10:40:48-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 13,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": true,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "change-landing agent automation present but no session-capture landing gate found"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "3dPCB-paper",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-02T15:55:27-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "quiescent",
+          "visibility": "local",
+          "default_branch": "quiescent-wiki",
+          "pushed_at": "2026-07-27T23:28:36-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "zejent",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-07-03T08:51:53-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 1,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "ks-systems-hardware",
+          "visibility": "local",
+          "default_branch": "feat/add-tower-case",
+          "pushed_at": "2026-03-23T07:49:01-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": true,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "change-landing agent automation present but no session-capture landing gate found"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "ks-systems-web",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-16T10:36:58-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 3,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": true,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "change-landing agent automation present but no session-capture landing gate found"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "ncrmro-fj-runner-tests",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-03-31T12:10:09-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "standard-monorepo",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-05-12T09:06:49-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "ceridwen",
+          "visibility": "local",
+          "default_branch": "chore/devenv-2",
+          "pushed_at": "2026-06-06T10:57:17-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": true,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "change-landing agent automation present but no session-capture landing gate found"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "secrets",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-07-26T22:24:40-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "plant-caravan",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-16T08:48:17-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 5,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "cadeng",
+          "visibility": "local",
+          "default_branch": "refactor/bun-astro-workspace",
+          "pushed_at": "2026-06-02T15:55:31-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "2026-python-boilerplate",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-04-27T15:08:40-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 1,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "kube-connect",
+          "visibility": "local",
+          "default_branch": "agent/initial-design",
+          "pushed_at": "2026-07-26T18:49:19-05:00",
+          "active": false,
+          "role": "meta",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "terraform-quick-managed-cloud-cluster",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-03-25T15:02:30-05:00",
+          "active": false,
+          "role": "meta",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "docling-example",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-02T15:55:32-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "grafana-agent-observability-stack",
+          "visibility": "local",
+          "default_branch": "master",
+          "pushed_at": "2026-07-23T15:24:19-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "link",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-30T17:04:13-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "nixpkgs",
+          "visibility": "local",
+          "default_branch": "ratty-init",
+          "pushed_at": "2026-05-12T05:45:35-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 17,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "outfitter-default-profiles",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-06-18T00:33:06-05:00",
+          "active": false,
+          "role": "catalog",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 2,
+          "level_name": "delegated"
+        },
+        {
+          "name": "artera",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-05-12T09:25:46-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "panopticon",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-08-05T11:17:18-05:00",
+          "active": true,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "media-production-assistant",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-05-19T10:57:24-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 1,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
+        {
+          "name": "dotfiles",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-08-02T20:54:35-05:00",
+          "active": true,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": ".agents",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-08-07T21:53:28-05:00",
+          "active": true,
+          "role": "catalog",
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 2,
+          "level_name": "delegated"
+        },
+        {
+          "name": "ks-config",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T11:55:05-05:00",
+          "active": true,
+          "role": "application",
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": true,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 2,
+          "level_name": "delegated"
+        },
+        {
+          "name": "website",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-08-07T22:04:35-05:00",
+          "active": true,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": true,
+            "contributing_md": true,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 3,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": "plouton",
+          "visibility": "local",
+          "default_branch": "main",
+          "pushed_at": "2026-07-13T09:02:52-05:00",
+          "active": false,
+          "role": "application",
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "contributing_md": false,
+            "design_md": false,
+            "agents_links_contributing": false,
+            "dotagents_tree": false,
+            "ci_workflows": 1,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "copilot_agent": false,
+            "resident_deploy": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "unknown",
+              "note": "local checkout; forge branch rules not queried"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        }
+      ],
+      "milestones": [
+        {
+          "id": "e2e-smoketest",
+          "title": "e2e smoke test: issue → self-hosted agent",
+          "status": "unmet",
+          "evidence": "no self-hosted path from an issue to an agent (SaaS coding agents excluded by definition)"
+        },
+        {
+          "id": "instructions",
+          "title": "contributor docs for humans and agents",
+          "status": "met",
+          "evidence": "5/5 carry AGENTS.md or CLAUDE.md; 2 pair it with CONTRIBUTING.md (1 reference it from AGENTS.md); DESIGN.md in 0"
+        },
+        {
+          "id": "shared-catalog",
+          "title": "governed shared catalog",
+          "status": "unmet",
+          "evidence": "no repo carries validated workflow definitions beside a governance policy"
+        },
+        {
+          "id": "catalog-consumed",
+          "title": "catalog consumed by application repos",
+          "status": "met",
+          "evidence": "1 application repos carry a dotagents payload (ks-config)"
         },
         {
           "id": "triggered-agents",
