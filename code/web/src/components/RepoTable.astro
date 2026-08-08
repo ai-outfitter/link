@@ -1,0 +1,49 @@
+---
+const { repos } = Astro.props;
+const yes = "✓";
+const no = "—";
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>repo</th>
+      <th>level</th>
+      <th>AGENTS.md</th>
+      <th>.agents/</th>
+      <th>agent workflows</th>
+      <th>baseline</th>
+    </tr>
+  </thead>
+  <tbody>
+    {repos.map((repo: any) => (
+      <tr>
+        <td>
+          <code>{repo.name}</code>{" "}
+          {repo.visibility === "private" && <span class="dim">(private)</span>}
+        </td>
+        <td>
+          <span class="badge level">
+            {repo.level} {repo.level_name}
+          </span>
+        </td>
+        <td>{repo.signals.agents_md || repo.signals.claude_md ? yes : no}</td>
+        <td>{repo.signals.dotagents_tree ? yes : no}</td>
+        <td>
+          {repo.signals.agent_workflows.length > 0 ? (
+            <code>{repo.signals.agent_workflows.join(", ")}</code>
+          ) : (
+            no
+          )}
+        </td>
+        <td>
+          {repo.baseline.map((check: any) => (
+            <span class="badge" class:list={[check.status]} title={check.note}>
+              {check.rule}: {check.status}
+            </span>
+          ))}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>

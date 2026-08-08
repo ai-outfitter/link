@@ -1,9 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
+import RepoTable from "../components/RepoTable.astro";
 import report from "../data/report.json";
-
-const yes = "✓";
-const no = "—";
 ---
 
 <Base title="SDLC report">
@@ -14,72 +12,46 @@ const no = "—";
   </p>
 
   {
-    report.orgs.map((org) => (
-      <section class="card">
-        <h2 style="margin-top:0">
-          {org.org}
-          <span class="badge level">level {org.org_level} &middot; {org.org_level_name}</span>
-        </h2>
-        <p class="dim">
-          {org.repos.length} repos scanned ({org.sampling_note}) at {org.scanned_at}
-        </p>
+    report.orgs.map((org) => {
+      const active = org.repos.filter((repo) => repo.active);
+      const inactive = org.repos.filter((repo) => !repo.active);
+      return (
+        <section class="card">
+          <h2 style="margin-top:0">
+            {org.org}
+            <span class="badge level">level {org.org_level} &middot; {org.org_level_name}</span>
+          </h2>
+          <p class="dim">
+            {org.repos.length} repos scanned ({org.sampling_note}) at {org.scanned_at}
+            <br />
+            {org.ranking_note}
+          </p>
 
-        {org.gaps.length > 0 && (
-          <>
-            <strong>Gaps</strong>
-            <ul>
-              {org.gaps.map((gap) => (
-                <li>{gap}</li>
-              ))}
-            </ul>
-          </>
-        )}
+          {org.gaps.length > 0 && (
+            <>
+              <strong>Gaps</strong>
+              <ul>
+                {org.gaps.map((gap) => (
+                  <li>{gap}</li>
+                ))}
+              </ul>
+            </>
+          )}
 
-        <table>
-          <thead>
-            <tr>
-              <th>repo</th>
-              <th>level</th>
-              <th>AGENTS.md</th>
-              <th>.agents/</th>
-              <th>agent workflows</th>
-              <th>baseline</th>
-            </tr>
-          </thead>
-          <tbody>
-            {org.repos.map((repo) => (
-              <tr>
-                <td>
-                  <code>{repo.name}</code>{" "}
-                  {repo.visibility === "private" && <span class="dim">(private)</span>}
-                </td>
-                <td>
-                  <span class="badge level">
-                    {repo.level} {repo.level_name}
-                  </span>
-                </td>
-                <td>{repo.signals.agents_md || repo.signals.claude_md ? yes : no}</td>
-                <td>{repo.signals.dotagents_tree ? yes : no}</td>
-                <td>
-                  {repo.signals.agent_workflows.length > 0 ? (
-                    <code>{repo.signals.agent_workflows.join(", ")}</code>
-                  ) : (
-                    no
-                  )}
-                </td>
-                <td>
-                  {repo.baseline.map((check) => (
-                    <span class="badge" class:list={[check.status]} title={check.note}>
-                      {check.rule}: {check.status}
-                    </span>
-                  ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    ))
+          <RepoTable repos={active} />
+
+          {inactive.length > 0 && (
+            <details class="inactive">
+              <summary>
+                {inactive.length} inactive {inactive.length === 1 ? "repo" : "repos"} (no push in 7
+                days) — hidden, not ranked
+              </summary>
+              <RepoTable repos={inactive} />
+            </details>
+          )}
+        </section>
+      );
+    })
   }
 
   <h2>Evidence limits</h2>
@@ -87,3 +59,15 @@ const no = "—";
     {report.evidence_limits.map((limit) => <li>{limit}</li>)}
   </ul>
 </Base>
+
+<style>
+  details.inactive { margin-top: 1rem; }
+  details.inactive summary {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0;
+    border-top: 1px solid var(--hairline);
+  }
+  details.inactive table { opacity: 0.65; }
+</style>

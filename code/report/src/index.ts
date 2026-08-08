@@ -19,6 +19,9 @@ const ROOT = join(import.meta.dir, "..", "..", "..");
 const DATA_DIR = join(ROOT, "code", "web", "src", "data");
 const REPO_LIMIT = 30;
 const CONCURRENCY = 8;
+// A repo with no push in this window is inactive: still scanned and shown,
+// but excluded from the org-level ranking and the gap counts.
+const ACTIVE_WINDOW_DAYS = 7;
 
 const orgs = Bun.argv.slice(2);
 if (orgs.length === 0) {
@@ -122,7 +125,11 @@ function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
   return 0;
 }
 
-async function scanRepo(org: string, listing: RepoListing): Promise<RepoReport | null> {
+async function scanRepo(
+  org: string,
+  listing: RepoListing,
+  activeCutoff: number,
+): Promise<RepoReport | null> {
   const branch = listing.defaultBranchRef?.name;
   if (!branch) return null; // empty repository
   const tree = await ghJson<{ tree?: { path: string }[] }>([
@@ -142,6 +149,7 @@ async function scanRepo(org: string, listing: RepoListing): Promise<RepoReport |
     visibility: listing.visibility.toLowerCase(),
     default_branch: branch,
     pushed_at: listing.pushedAt,
+    active: Date.parse(listing.pushedAt) >= activeCutoff,
     signals,
     baseline,
     level,
@@ -174,30 +182,35 @@ async function scanOrg(org: string): Promise<OrgReport> {
     String(REPO_LIMIT),
   ]);
   if (listings === null) throw new Error(`cannot list repositories for ${org}`);
+  const activeCutoff = Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
-  const repos = (await mapLimit(sorted, CONCURRENCY, (l) => scanRepo(org, l))).filter(
-    (r): r is RepoReport => r !== null,
-  );
+  const repos = (
+    await mapLimit(sorted, CONCURRENCY, (l) => scanRepo(org, l, activeCutoff))
+  ).filter((r): r is RepoReport => r !== null);
+
+  // Ranking and gaps consider only active repos: a shelved repo's missing
+  // branch protection is not the org's current practice.
+  const ranked = repos.filter((r) => r.active);
 
   // The org level is what it can claim consistently: the highest level at
-  // least half of the scanned repositories reach.
+  // least half of the ranked repositories reach.
   const orgLevel =
     [5, 4, 3, 2, 1].find(
-      (lvl) => repos.length > 0 && repos.filter((r) => r.level >= lvl).length * 2 >= repos.length,
+      (lvl) => ranked.length > 0 && ranked.filter((r) => r.level >= lvl).length * 2 >= ranked.length,
     ) ?? 0;
 
   const gaps: string[] = [];
-  const failing = repos.filter((r) =>
+  const failing = ranked.filter((r) =>
     r.baseline.some((c) => c.rule === "branch-protection" && c.status === "fail"),
   );
   if (failing.length > 0)
     gaps.push(
-      `${failing.length}/${repos.length} repos miss baseline branch protection (required checks + reviews)`,
+      `${failing.length}/${ranked.length} active repos miss baseline branch protection (required checks + reviews)`,
     );
-  const noInstructions = repos.filter((r) => !r.signals.agents_md && !r.signals.claude_md);
+  const noInstructions = ranked.filter((r) => !r.signals.agents_md && !r.signals.claude_md);
   if (noInstructions.length > 0)
-    gaps.push(`${noInstructions.length}/${repos.length} repos have no AGENTS.md or CLAUDE.md`);
-  const withAgents = repos.filter((r) => r.signals.agent_workflows.length > 0);
+    gaps.push(`${noInstructions.length}/${ranked.length} active repos have no AGENTS.md or CLAUDE.md`);
+  const withAgents = ranked.filter((r) => r.signals.agent_workflows.length > 0);
   if (withAgents.length > 0)
     gaps.push(
       `no session-capture landing gate found on any of the ${withAgents.length} repos running agent workflows`,
@@ -210,6 +223,7 @@ async function scanOrg(org: string): Promise<OrgReport> {
       listings.length >= REPO_LIMIT
         ? `most recently pushed ${REPO_LIMIT} repositories`
         : `all ${listings.length} repositories`,
+    ranking_note: `ranking covers the ${ranked.length} repos pushed within ${ACTIVE_WINDOW_DAYS} days; ${repos.length - ranked.length} inactive repos are listed but not ranked`,
     repos,
     org_level: orgLevel,
     org_level_name: LEVEL_NAMES[orgLevel],

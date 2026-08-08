@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T02:54:46.023Z",
+  "generated_at": "2026-08-08T04:01:31.727Z",
   "baseline": {
     "name": "sdlc-baseline",
     "enforcement": "warn"
@@ -7,14 +7,55 @@
   "orgs": [
     {
       "org": "ai-outfitter",
-      "scanned_at": "2026-08-08T02:54:49.120Z",
+      "scanned_at": "2026-08-08T04:01:34.919Z",
       "sampling_note": "all 19 repositories",
+      "ranking_note": "ranking covers the 12 repos pushed within 7 days; 7 inactive repos are listed but not ranked",
       "repos": [
+        {
+          "name": "link",
+          "visibility": "private",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T03:49:36Z",
+          "active": true,
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "dotagents_tree": false,
+            "ci_workflows": 1,
+            "agent_workflows": [],
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "unknown",
+              "note": "no agent workflows found, gate not applicable yet"
+            }
+          ],
+          "level": 0,
+          "level_name": "none"
+        },
         {
           "name": "community-profiles",
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-08T02:38:28Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -55,6 +96,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-08T02:34:44Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -93,6 +135,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-08T00:22:45Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -131,6 +174,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-07T21:00:13Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -171,6 +215,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-07T20:35:07Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -209,6 +254,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-07T20:35:05Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -247,6 +293,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-08-07T18:56:32Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -285,6 +332,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-07T14:58:46Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -323,6 +371,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-05T18:09:01Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -361,6 +410,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-04T20:37:37Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -399,6 +449,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-03T17:46:46Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -437,6 +488,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-07-29T01:06:52Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -477,6 +529,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-07-28T02:28:07Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -515,6 +568,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-07-23T04:14:56Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -553,6 +607,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-07-22T19:51:04Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -591,6 +646,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-07-02T23:05:33Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -629,6 +685,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-06-05T17:39:13Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -667,6 +724,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-06-05T17:28:59Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -704,21 +762,23 @@
       "org_level": 1,
       "org_level_name": "assisted",
       "gaps": [
-        "17/18 repos miss baseline branch protection (required checks + reviews)",
-        "7/18 repos have no AGENTS.md or CLAUDE.md",
-        "no session-capture landing gate found on any of the 3 repos running agent workflows"
+        "11/12 active repos miss baseline branch protection (required checks + reviews)",
+        "6/12 active repos have no AGENTS.md or CLAUDE.md",
+        "no session-capture landing gate found on any of the 2 repos running agent workflows"
       ]
     },
     {
       "org": "Unsupervisedcom",
-      "scanned_at": "2026-08-08T02:54:50.998Z",
+      "scanned_at": "2026-08-08T04:01:36.688Z",
       "sampling_note": "most recently pushed 30 repositories",
+      "ranking_note": "ranking covers the 11 repos pushed within 7 days; 19 inactive repos are listed but not ranked",
       "repos": [
         {
           "name": "tarot",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T02:36:59Z",
+          "pushed_at": "2026-08-08T03:17:41Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": true,
@@ -757,6 +817,7 @@
           "visibility": "internal",
           "default_branch": "main",
           "pushed_at": "2026-08-07T23:07:37Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -797,6 +858,7 @@
           "visibility": "private",
           "default_branch": "mini/compute-dockerfile-arch",
           "pushed_at": "2026-08-07T10:01:38Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -837,6 +899,7 @@
           "visibility": "internal",
           "default_branch": "staging",
           "pushed_at": "2026-08-07T07:13:28Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -877,6 +940,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-08-06T23:19:08Z",
+          "active": true,
           "signals": {
             "agents_md": false,
             "claude_md": true,
@@ -915,6 +979,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-06T20:45:40Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -953,6 +1018,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-08-06T11:21:43Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -991,6 +1057,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-08-05T20:38:28Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1029,6 +1096,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-04T23:03:14Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1070,6 +1138,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-08-03T18:15:49Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1108,6 +1177,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-08-02T11:52:14Z",
+          "active": true,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1146,6 +1216,7 @@
           "visibility": "public",
           "default_branch": "jumpstart",
           "pushed_at": "2026-07-31T22:19:37Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1184,6 +1255,7 @@
           "visibility": "private",
           "default_branch": "master",
           "pushed_at": "2026-07-28T23:58:09Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1222,6 +1294,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-07-21T20:38:04Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1260,6 +1333,7 @@
           "visibility": "private",
           "default_branch": "master",
           "pushed_at": "2026-07-18T06:35:04Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1298,6 +1372,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-07-16T18:34:48Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1336,6 +1411,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-06-30T23:06:52Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1374,6 +1450,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-06-30T18:52:19Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1412,6 +1489,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-06-25T16:14:03Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1450,6 +1528,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-06-13T11:08:32Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1488,6 +1567,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-06-12T19:38:37Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1526,6 +1606,7 @@
           "visibility": "private",
           "default_branch": "master",
           "pushed_at": "2026-06-11T15:59:10Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1564,6 +1645,7 @@
           "visibility": "private",
           "default_branch": "master",
           "pushed_at": "2026-06-11T15:44:29Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1602,6 +1684,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-06-05T18:42:26Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": false,
@@ -1640,6 +1723,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-05-20T14:58:01Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1678,6 +1762,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-05-11T17:43:17Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": true,
@@ -1716,6 +1801,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-05-10T18:44:52Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": true,
@@ -1754,6 +1840,7 @@
           "visibility": "public",
           "default_branch": "main",
           "pushed_at": "2026-05-04T13:40:43Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": false,
@@ -1794,6 +1881,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-04-22T19:24:54Z",
+          "active": false,
           "signals": {
             "agents_md": false,
             "claude_md": true,
@@ -1832,6 +1920,7 @@
           "visibility": "private",
           "default_branch": "main",
           "pushed_at": "2026-04-15T23:00:29Z",
+          "active": false,
           "signals": {
             "agents_md": true,
             "claude_md": true,
@@ -1869,9 +1958,8 @@
       "org_level": 1,
       "org_level_name": "assisted",
       "gaps": [
-        "24/30 repos miss baseline branch protection (required checks + reviews)",
-        "8/30 repos have no AGENTS.md or CLAUDE.md",
-        "no session-capture landing gate found on any of the 5 repos running agent workflows"
+        "7/11 active repos miss baseline branch protection (required checks + reviews)",
+        "no session-capture landing gate found on any of the 4 repos running agent workflows"
       ]
     }
   ],

@@ -51,8 +51,11 @@ signals (instruction files, `.agents/`, agent workflows), and a per-rule
 audit against `governance/sdlc-baseline.yaml`. Output is typed JSON
 validated with zod (`code/report/src/schema.ts`); `workflows/*.yaml` are
 parsed with Bun's native YAML support into `workflows.json` beside it.
-Absence of evidence is recorded as absence — local-only practice is
-invisible to a forge scan, and the report says so in `evidence_limits`.
+Repositories with no push in the last 7 days are scanned and listed but
+excluded from the org ranking and gap counts — the site collapses them
+into a hidden section by default. Absence of evidence is recorded as
+absence — local-only practice is invisible to a forge scan, and the report
+says so in `evidence_limits`.
 
 ## Layout
 
