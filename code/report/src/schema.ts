@@ -31,6 +31,10 @@ export const Signals = z.object({
   // copilot-setup-steps.yml is not an agent workflow itself, but it is
   // evidence the forge's coding agent is enabled for this repo.
   copilot_agent: z.boolean(),
+  // deploy/<agent>.yaml manifests beside a dotagents payload: a resident
+  // agent deployment (self-hosted, e.g. via agent-operator), not a SaaS
+  // coding agent.
+  resident_deploy: z.boolean(),
   docs: z.enum(["none", "thin", "adequate"]),
 });
 
@@ -64,6 +68,7 @@ export const RepoReport = z.object({
 
 export const OrgReport = z.object({
   org: z.string(),
+  source_type: z.enum(["github-org", "folder"]),
   scanned_at: z.string(),
   sampling_note: z.string(),
   ranking_note: z.string(),

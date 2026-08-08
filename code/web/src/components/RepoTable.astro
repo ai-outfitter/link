@@ -21,7 +21,9 @@ const no = "—";
         <td>
           <code>{repo.name}</code>{" "}
           {repo.signals.catalog && <span class="badge">catalog</span>}{" "}
-          {repo.visibility === "private" && <span class="dim">(private)</span>}
+          {["private", "local"].includes(repo.visibility) && (
+            <span class="dim">({repo.visibility})</span>
+          )}
         </td>
         <td>
           <span class="badge level">

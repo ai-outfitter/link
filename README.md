@@ -46,6 +46,22 @@ against them.
 
 ## The report
 
+Sources can be GitHub orgs or **local folders** — a single checkout, an
+owner folder of clones, or a whole `~/repos/` root; hidden directories are
+included because the org/user `.agents` catalog is the canonical eval
+anchor. `link report add <org-or-path>` registers a source persistently in
+`$XDG_CONFIG_HOME/outfitter-link/sources.json`; a bare `link report` scans
+everything registered. The local `~/repos/ai-outfitter` folder is always
+included for local development, and a copy of every report also lands in
+`$XDG_DATA_HOME/outfitter-link/report.json`.
+
+The first milestone in every report is the **e2e smoke test**: does any
+path exist from an issue to an agent the org itself hosts and controls — a
+self-hosted harness in its own CI, or a resident agent with `deploy/`
+manifests? SaaS coding agents (Copilot, vendor apps) are excluded by
+definition; being able to assign work to an agent whose destiny you control
+is the capability everything else builds on.
+
 Each repository gets maturity-ramp placement (level 0–5), tree-derived
 signals (instruction files, `.agents/`, agent workflows), and a per-rule
 audit against `governance/sdlc-baseline.yaml`. Output is typed JSON
@@ -74,7 +90,8 @@ code/web/       the Astro site behind `link web`
 ## Develop
 
 ```sh
-cd code/report && bun install && bun run src/index.ts <org>   # scanner
+cd code/report && bun install && bun run src/index.ts         # scanner (registered sources)
+bun run src/index.ts add <org-or-path>                        # register a source
 cd code/web && bun install && bun run dev                     # site
 ```
 

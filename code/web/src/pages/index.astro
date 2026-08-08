@@ -22,6 +22,7 @@ import "../styles/report.css";
           <h2 style="margin-top:0">
             {org.org}
             <span class="badge level">level {org.org_level} &middot; {org.org_level_name}</span>
+            <span class="badge">{org.source_type === "folder" ? "local folder" : "github org"}</span>
           </h2>
           <p class="dim">
             {org.repos.length} repos scanned ({org.sampling_note}) at {org.scanned_at}

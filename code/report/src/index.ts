@@ -1,10 +1,21 @@
-// Org SDLC report: scan one or more GitHub orgs read-only through the
-// authenticated `gh` CLI, audit each repository against the catalog's
-// governance baseline, and emit typed JSON the Astro site renders.
+// Org SDLC report: scan GitHub orgs (read-only, via the authenticated `gh`
+// CLI) and local checkout folders, audit each repository against the
+// catalog's governance baseline, and emit typed JSON the Astro site renders.
 //
-// Usage: bun run src/index.ts <org> [org...]
+// Sources are persistent: `add <target>` registers a GitHub org or a folder
+// in $XDG_CONFIG_HOME/outfitter-link/sources.json; a bare run scans every
+// registered source. ~/repos/ai-outfitter is always included for local
+// development, and an org/user's .agents catalog folder is the canonical
+// eval anchor — folder expansion therefore includes hidden directories.
+//
+// Usage:
+//   bun run src/index.ts                  # scan registered sources
+//   bun run src/index.ts add <target>...  # register org(s)/folder(s), then scan
+//   bun run src/index.ts <target>...      # scan registered + these (not saved)
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve, basename } from "node:path";
 import {
   BaselineCheck,
   LEVEL_NAMES,
@@ -18,27 +29,73 @@ import {
 
 const ROOT = join(import.meta.dir, "..", "..", "..");
 const DATA_DIR = join(ROOT, "code", "web", "src", "data");
+const XDG_CONFIG = join(
+  Bun.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
+  "outfitter-link",
+);
+const XDG_DATA = join(
+  Bun.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"),
+  "outfitter-link",
+);
+const SOURCES_FILE = join(XDG_CONFIG, "sources.json");
+const DEFAULT_FOLDER = join(homedir(), "repos", "ai-outfitter");
 const REPO_LIMIT = 30;
 const CONCURRENCY = 8;
 // A repo with no push in this window is inactive: still scanned and shown,
 // but excluded from the org-level ranking and the gap counts.
 const ACTIVE_WINDOW_DAYS = 7;
 
-const orgs = Bun.argv.slice(2);
-if (orgs.length === 0) {
-  console.error("usage: bun run src/index.ts <org> [org...]");
-  process.exit(2);
-}
+type Source = { type: "github-org" | "folder"; target: string };
 
 const baselineDoc = Bun.YAML.parse(
   await Bun.file(join(ROOT, "governance", "sdlc-baseline.yaml")).text(),
 ) as Record<string, any>;
 
-type RepoListing = {
+// ── source registry ─────────────────────────────────────────────────────────
+
+function loadSources(): Source[] {
+  if (!existsSync(SOURCES_FILE)) return [];
+  try {
+    const doc = JSON.parse(readFileSync(SOURCES_FILE, "utf8"));
+    return Array.isArray(doc.sources) ? doc.sources : [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveSources(sources: Source[]) {
+  mkdirSync(XDG_CONFIG, { recursive: true });
+  await Bun.write(SOURCES_FILE, JSON.stringify({ sources }, null, 2) + "\n");
+}
+
+function toSource(target: string): Source {
+  const expanded = target.startsWith("~") ? join(homedir(), target.slice(1)) : target;
+  return existsSync(expanded)
+    ? { type: "folder", target: resolve(expanded) }
+    : { type: "github-org", target };
+}
+
+function dedupe(sources: Source[]): Source[] {
+  const seen = new Set<string>();
+  return sources.filter((s) => {
+    const key = `${s.type}:${s.target}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ── shared classification ───────────────────────────────────────────────────
+
+type RepoInput = {
   name: string;
   visibility: string;
-  defaultBranchRef: { name: string } | null;
-  pushedAt: string;
+  default_branch: string;
+  pushed_at: string;
+  paths: string[];
+  agentsMdBody: string | null;
+  branchRules: any[] | null;
+  rulesNote: string;
 };
 
 const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot|review-bot/i;
@@ -47,23 +104,12 @@ const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot|review-bot/i;
 // configures an environment.
 const AGENT_WORKFLOW_EXCLUDE = /setup|publish|deploy|build|image|release/i;
 const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|nix|sh|bash|sql|proto|astro|vue|svelte)$/;
-
-async function ghJson<T>(args: string[]): Promise<T | null> {
-  const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "ignore" });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) return null;
-  try {
-    return JSON.parse(out) as T;
-  } catch {
-    return null;
-  }
-}
+// GitHub and Forgejo/Gitea CI both count.
+const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
 
 function classifySignals(paths: string[], agentsMdBody: string | null): Signals {
   const has = (p: string) => paths.includes(p);
-  const ciWorkflows = paths.filter(
-    (p) => p.startsWith(".github/workflows/") && /\.ya?ml$/.test(p),
-  );
+  const ciWorkflows = paths.filter((p) => CI_DIR.test(p) && /\.ya?ml$/.test(p));
   const docCount = paths.filter((p) => p.startsWith("docs/") && p.endsWith(".md")).length;
   // A catalog repo carries its dotagents payload at the repository root.
   const catalog =
@@ -77,6 +123,7 @@ function classifySignals(paths: string[], agentsMdBody: string | null): Signals 
         .filter((p) => /^workflows\/[^/]+\.ya?ml$/.test(p))
         .map((p) => p.replace("workflows/", ""))
     : [];
+  const dotagentsTree = paths.some((p) => p.startsWith(".agents/"));
   return Signals.parse({
     agents_md: has("AGENTS.md"),
     claude_md: has("CLAUDE.md"),
@@ -84,15 +131,17 @@ function classifySignals(paths: string[], agentsMdBody: string | null): Signals 
     design_md: has("DESIGN.md"),
     agents_links_contributing:
       agentsMdBody !== null && /CONTRIBUTING\.md/i.test(agentsMdBody),
-    dotagents_tree: paths.some((p) => p.startsWith(".agents/")),
+    dotagents_tree: dotagentsTree,
     ci_workflows: ciWorkflows.length,
     agent_workflows: ciWorkflows
       .filter((p) => AGENT_WORKFLOW_HINT.test(p) && !AGENT_WORKFLOW_EXCLUDE.test(p))
-      .map((p) => p.replace(".github/workflows/", "")),
+      .map((p) => p.replace(CI_DIR, "")),
     catalog,
     declared_workflows: declaredWorkflows,
     governance: paths.some((p) => /^governance\/.+\.ya?ml$/.test(p)),
     copilot_agent: ciWorkflows.some((p) => p.includes("copilot-setup-steps")),
+    resident_deploy:
+      (catalog || dotagentsTree) && paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
   });
 }
@@ -102,26 +151,19 @@ function classifyRole(name: string, paths: string[], signals: Signals): "catalog
   // Meta repos (org config, docs-only) are listed but never ranked: they
   // will never need agent workflows, and counting them against the org
   // punishes having utility repos.
-  if (name === ".github") return "meta";
+  if (basename(name) === ".github") return "meta";
   if (!paths.some((p) => CODE_FILE.test(p)) && signals.ci_workflows === 0) return "meta";
   return "application";
 }
 
-function auditBaseline(
-  signals: Signals,
-  branchRules: any[] | null,
-): BaselineCheck[] {
+function auditBaseline(signals: Signals, input: RepoInput): BaselineCheck[] {
   const checks: BaselineCheck[] = [];
   const bp = baselineDoc.rules?.["branch-protection"] ?? {};
 
-  if (branchRules === null) {
-    checks.push({
-      rule: "branch-protection",
-      status: "unknown",
-      note: "branch rules endpoint not readable with this token",
-    });
+  if (input.branchRules === null) {
+    checks.push({ rule: "branch-protection", status: "unknown", note: input.rulesNote });
   } else {
-    const types = new Set(branchRules.map((r) => r.type));
+    const types = new Set(input.branchRules.map((r) => r.type));
     const hasChecks = types.has("required_status_checks");
     const hasReviews = types.has("pull_request");
     const wanted = `required-checks ${JSON.stringify(bp["required-checks"] ?? [])}, required-reviews ${bp["required-reviews"] ?? 0}`;
@@ -157,6 +199,26 @@ function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
   return 0;
 }
 
+function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
+  const signals = classifySignals(input.paths, input.agentsMdBody);
+  const baseline = auditBaseline(signals, input);
+  const level = maturityLevel(signals, baseline);
+  return RepoReport.parse({
+    name: input.name,
+    visibility: input.visibility,
+    default_branch: input.default_branch,
+    pushed_at: input.pushed_at,
+    active: Date.parse(input.pushed_at) >= activeCutoff,
+    role: classifyRole(input.name, input.paths, signals),
+    signals,
+    baseline,
+    level,
+    level_name: LEVEL_NAMES[level],
+  });
+}
+
+// ── milestones ──────────────────────────────────────────────────────────────
+
 const LEVEL_REQUIREMENTS: Record<number, string[]> = {
   1: ["instructions"],
   2: ["shared-catalog", "catalog-consumed"],
@@ -185,7 +247,35 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
   );
   const enforcement = String(baselineDoc.enforcement ?? "warn");
 
+  // The e2e smoke test: does ANY path exist from an issue to an agent the
+  // org itself hosts and controls? SaaS coding agents (Copilot, vendor
+  // GitHub apps) are excluded by definition — they are someone else's
+  // destiny. Evidence: self-hosted harnesses running in own CI, or
+  // resident agents with deployment manifests. The org/user's .agents
+  // catalog is the canonical place this evidence lives.
+  const sovereignCI = ranked.filter((r) => r.signals.agent_workflows.length > 0);
+  const resident = ranked.filter((r) => r.signals.resident_deploy);
+  const declared = ranked.filter((r) => r.signals.declared_workflows.length > 0);
+  const smoketestParts: string[] = [];
+  if (sovereignCI.length > 0)
+    smoketestParts.push(
+      `self-hosted CI agents: ${sovereignCI.map((r) => `${r.name} (${r.signals.agent_workflows.join(", ")})`).join("; ")}`,
+    );
+  if (resident.length > 0)
+    smoketestParts.push(`resident agents: ${names(resident)} (deploy/ manifests)`);
+
   return [
+    {
+      id: "e2e-smoketest",
+      title: "e2e smoke test: issue → self-hosted agent",
+      status: sovereignCI.length > 0 || resident.length > 0 ? "met" : "unmet",
+      evidence:
+        smoketestParts.length > 0
+          ? `${smoketestParts.join(" · ")} (SaaS coding agents excluded)`
+          : declared.length > 0
+            ? `declared only: ${names(declared)} carry workflow definitions but no runtime executes them; SaaS coding agents excluded`
+            : "no self-hosted path from an issue to an agent (SaaS coding agents excluded by definition)",
+    },
     {
       id: "instructions",
       title: "contributor docs for humans and agents",
@@ -271,11 +361,27 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
   ].map((m) => Milestone.parse(m));
 }
 
-async function scanRepo(
-  org: string,
-  listing: RepoListing,
-  activeCutoff: number,
-): Promise<RepoReport | null> {
+// ── github source ───────────────────────────────────────────────────────────
+
+type RepoListing = {
+  name: string;
+  visibility: string;
+  defaultBranchRef: { name: string } | null;
+  pushedAt: string;
+};
+
+async function ghJson<T>(args: string[]): Promise<T | null> {
+  const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "ignore" });
+  const out = await new Response(proc.stdout).text();
+  if ((await proc.exited) !== 0) return null;
+  try {
+    return JSON.parse(out) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoInput | null> {
   const branch = listing.defaultBranchRef?.name;
   if (!branch) return null; // empty repository
   const tree = await ghJson<{ tree?: { path: string }[] }>([
@@ -293,26 +399,80 @@ async function scanRepo(
     ]);
     if (file?.content) agentsMdBody = Buffer.from(file.content, "base64").toString("utf8");
   }
-  const signals = classifySignals(paths, agentsMdBody);
-  const rules = await ghJson<any[]>([
+  const branchRules = await ghJson<any[]>([
     "api",
     `repos/${org}/${listing.name}/rules/branches/${branch}`,
   ]);
-  const baseline = auditBaseline(signals, rules);
-  const level = maturityLevel(signals, baseline);
-  return RepoReport.parse({
+  return {
     name: listing.name,
     visibility: listing.visibility.toLowerCase(),
     default_branch: branch,
     pushed_at: listing.pushedAt,
-    active: Date.parse(listing.pushedAt) >= activeCutoff,
-    role: classifyRole(listing.name, paths, signals),
-    signals,
-    baseline,
-    level,
-    level_name: LEVEL_NAMES[level],
-  });
+    paths,
+    agentsMdBody,
+    branchRules,
+    rulesNote: "branch rules endpoint not readable with this token",
+  };
 }
+
+// ── folder source ───────────────────────────────────────────────────────────
+
+function isGitRepo(dir: string): boolean {
+  return existsSync(join(dir, ".git"));
+}
+
+function listRepoDirs(root: string): string[] {
+  // A folder source is a repo, a folder of repos (an owner), or a folder of
+  // owners. Hidden directories are included deliberately: the org/user
+  // .agents catalog is the canonical eval anchor. Worktree siblings are not
+  // separate repos.
+  if (isGitRepo(root)) return [root];
+  const children = readdirSync(root)
+    .filter((c) => !c.endsWith(".worktrees") && c !== "node_modules")
+    .map((c) => join(root, c))
+    .filter((p) => statSync(p, { throwIfNoEntry: false })?.isDirectory());
+  const repos = children.filter(isGitRepo);
+  if (repos.length > 0) return repos;
+  return children.flatMap((owner) =>
+    readdirSync(owner)
+      .filter((c) => !c.endsWith(".worktrees") && c !== "node_modules")
+      .map((c) => join(owner, c))
+      .filter((p) => statSync(p, { throwIfNoEntry: false })?.isDirectory() && isGitRepo(p)),
+  );
+}
+
+async function git(dir: string, args: string[]): Promise<string | null> {
+  const proc = Bun.spawn(["git", "-C", dir, ...args], { stdout: "pipe", stderr: "ignore" });
+  const out = await new Response(proc.stdout).text();
+  return (await proc.exited) === 0 ? out.trim() : null;
+}
+
+async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | null> {
+  const files = await git(dir, ["ls-files"]);
+  if (files === null) return null;
+  const paths = files.split("\n").filter(Boolean);
+  const pushedAt = (await git(dir, ["log", "-1", "--format=%cI"])) ?? new Date(0).toISOString();
+  const branch = (await git(dir, ["rev-parse", "--abbrev-ref", "HEAD"])) ?? "HEAD";
+  let agentsMdBody: string | null = null;
+  if (paths.includes("AGENTS.md") && paths.includes("CONTRIBUTING.md")) {
+    try {
+      agentsMdBody = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    } catch {}
+  }
+  const name = dir === root ? basename(dir) : dir.slice(root.length + 1);
+  return {
+    name,
+    visibility: "local",
+    default_branch: branch,
+    pushed_at: pushedAt,
+    paths,
+    agentsMdBody,
+    branchRules: null,
+    rulesNote: "local checkout; forge branch rules not queried",
+  };
+}
+
+// ── orchestration ───────────────────────────────────────────────────────────
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const results: R[] = [];
@@ -328,22 +488,37 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
   return results;
 }
 
-async function scanOrg(org: string): Promise<OrgReport> {
-  const listings = await ghJson<RepoListing[]>([
-    "repo",
-    "list",
-    org,
-    "--json",
-    "name,visibility,defaultBranchRef,pushedAt",
-    "--limit",
-    String(REPO_LIMIT),
-  ]);
-  if (listings === null) throw new Error(`cannot list repositories for ${org}`);
+async function scanSource(source: Source): Promise<OrgReport> {
   const activeCutoff = Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
-  const repos = (
-    await mapLimit(sorted, CONCURRENCY, (l) => scanRepo(org, l, activeCutoff))
-  ).filter((r): r is RepoReport => r !== null);
+  let inputs: (RepoInput | null)[];
+  let samplingNote: string;
+
+  if (source.type === "github-org") {
+    const listings = await ghJson<RepoListing[]>([
+      "repo",
+      "list",
+      source.target,
+      "--json",
+      "name,visibility,defaultBranchRef,pushedAt",
+      "--limit",
+      String(REPO_LIMIT),
+    ]);
+    if (listings === null) throw new Error(`cannot list repositories for ${source.target}`);
+    const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
+    inputs = await mapLimit(sorted, CONCURRENCY, (l) => scanGithubRepo(source.target, l));
+    samplingNote =
+      listings.length >= REPO_LIMIT
+        ? `most recently pushed ${REPO_LIMIT} repositories`
+        : `all ${listings.length} repositories`;
+  } else {
+    const dirs = listRepoDirs(source.target);
+    inputs = await mapLimit(dirs, CONCURRENCY, (d) => scanLocalRepo(source.target, d));
+    samplingNote = `${dirs.length} local checkouts under ${source.target}`;
+  }
+
+  const repos = inputs
+    .filter((r): r is RepoInput => r !== null)
+    .map((r) => buildRepoReport(r, activeCutoff));
 
   // Ranking considers only active, non-meta repos: a shelved repo's missing
   // branch protection is not current practice, and org-config or docs-only
@@ -374,15 +549,13 @@ async function scanOrg(org: string): Promise<OrgReport> {
     );
 
   return OrgReport.parse({
-    org,
+    org: source.target,
+    source_type: source.type,
     scanned_at: new Date().toISOString(),
-    sampling_note:
-      listings.length >= REPO_LIMIT
-        ? `most recently pushed ${REPO_LIMIT} repositories`
-        : `all ${listings.length} repositories`,
+    sampling_note: samplingNote,
     ranking_note: `ranking covers the ${ranked.length} active catalog/application repos; ${repos.length - ranked.length} inactive or meta repos are listed but not ranked`,
-    milestones,
     repos,
+    milestones,
     org_level: orgLevel,
     org_level_name: LEVEL_NAMES[orgLevel],
     gaps,
@@ -400,27 +573,60 @@ async function collectWorkflows(): Promise<WorkflowsFile> {
   return WorkflowsFile.parse(out);
 }
 
+// ── main ────────────────────────────────────────────────────────────────────
+
+const argv = Bun.argv.slice(2);
+let registered = loadSources();
+
+if (argv[0] === "add") {
+  const added = argv.slice(1).map(toSource);
+  if (added.length === 0) {
+    console.error("usage: bun run src/index.ts add <org-or-path>...");
+    process.exit(2);
+  }
+  registered = dedupe([...registered, ...added]);
+  await saveSources(registered);
+  console.log(`registered: ${registered.map((s) => s.target).join(", ")}`);
+}
+
+const ephemeral = argv[0] === "add" ? [] : argv.map(toSource);
+// The local ai-outfitter checkout folder is always part of the local
+// development report; its .agents catalog is the default eval anchor.
+const defaults: Source[] = existsSync(DEFAULT_FOLDER)
+  ? [{ type: "folder", target: DEFAULT_FOLDER }]
+  : [];
+const sources = dedupe([...defaults, ...registered, ...ephemeral]);
+
+if (sources.length === 0) {
+  console.error("no sources: pass a GitHub org or folder, or `add` one first");
+  process.exit(2);
+}
+
 const report = Report.parse({
   generated_at: new Date().toISOString(),
   baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
-  orgs: await mapLimit(orgs, 2, scanOrg),
+  orgs: await mapLimit(sources, 2, scanSource),
   evidence_limits: [
-    "forge tree scan only: local-only harness use and unpushed practice are invisible",
+    "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
     "absence of evidence is recorded as absence, not as a negative fact",
-    `sampled at most ${REPO_LIMIT} most recently pushed repositories per org`,
+    `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
     "org-level settings (bot capability caps, team membership) were not queried",
+    "local checkouts report forge branch rules as unknown",
   ],
 });
 
+mkdirSync(XDG_DATA, { recursive: true });
 await Bun.write(join(DATA_DIR, "report.json"), JSON.stringify(report, null, 2) + "\n");
+await Bun.write(join(XDG_DATA, "report.json"), JSON.stringify(report, null, 2) + "\n");
 await Bun.write(
   join(DATA_DIR, "workflows.json"),
   JSON.stringify(await collectWorkflows(), null, 2) + "\n",
 );
 
 for (const org of report.orgs) {
+  const smoke = org.milestones.find((m) => m.id === "e2e-smoketest");
   console.log(
-    `${org.org}: level ${org.org_level} (${org.org_level_name}), ${org.repos.length} repos scanned, ${org.gaps.length} gaps`,
+    `${org.org} [${org.source_type}]: level ${org.org_level} (${org.org_level_name}), ${org.repos.length} repos, smoketest ${smoke?.status}`,
   );
 }
-console.log(`wrote ${join(DATA_DIR, "report.json")} and workflows.json`);
+console.log(`wrote ${join(DATA_DIR, "report.json")} (+ ${join(XDG_DATA, "report.json")})`);
