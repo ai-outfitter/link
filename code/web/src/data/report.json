@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-08T04:35:12.247Z",
+  "generated_at": "2026-08-08T13:28:25.822Z",
   "baseline": {
     "name": "sdlc-baseline",
     "enforcement": "warn"
@@ -7,23 +7,70 @@
   "orgs": [
     {
       "org": "ai-outfitter",
-      "scanned_at": "2026-08-08T04:35:15.299Z",
+      "scanned_at": "2026-08-08T13:28:29.361Z",
       "sampling_note": "all 19 repositories",
       "ranking_note": "ranking covers the 12 repos pushed within 7 days; 7 inactive repos are listed but not ranked",
       "repos": [
         {
-          "name": ".agents",
+          "name": "outfitter",
           "visibility": "public",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T04:34:46Z",
+          "pushed_at": "2026-08-08T13:12:34Z",
           "active": true,
           "signals": {
             "agents_md": true,
-            "claude_md": true,
+            "claude_md": false,
             "dotagents_tree": false,
-            "ci_workflows": 0,
+            "ci_workflows": 5,
+            "agent_workflows": [
+              "issue-triage.yml"
+            ],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "docs": "adequate"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "pass",
+              "note": "effective rules: [pull_request, required_status_checks, merge_queue]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "agent workflows present but no session-capture landing gate found"
+            }
+          ],
+          "level": 3,
+          "level_name": "automated"
+        },
+        {
+          "name": "channels",
+          "visibility": "public",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:42:27Z",
+          "active": true,
+          "signals": {
+            "agents_md": false,
+            "claude_md": false,
+            "dotagents_tree": false,
+            "ci_workflows": 3,
             "agent_workflows": [],
-            "docs": "thin"
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "docs": "adequate"
           },
           "baseline": [
             {
@@ -47,14 +94,14 @@
               "note": "no agent workflows found, gate not applicable yet"
             }
           ],
-          "level": 1,
-          "level_name": "assisted"
+          "level": 0,
+          "level_name": "none"
         },
         {
           "name": ".github",
           "visibility": "public",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T04:32:18Z",
+          "pushed_at": "2026-08-08T04:41:01Z",
           "active": true,
           "signals": {
             "agents_md": false,
@@ -62,6 +109,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -93,7 +143,7 @@
           "name": "link",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T04:02:20Z",
+          "pushed_at": "2026-08-08T04:35:24Z",
           "active": true,
           "signals": {
             "agents_md": false,
@@ -101,6 +151,12 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [
+              "feature-request.yaml",
+              "vulnerability-fix.yaml"
+            ],
+            "governance": true,
             "docs": "thin"
           },
           "baseline": [
@@ -125,8 +181,53 @@
               "note": "no agent workflows found, gate not applicable yet"
             }
           ],
-          "level": 0,
-          "level_name": "none"
+          "level": 4,
+          "level_name": "governed"
+        },
+        {
+          "name": ".agents",
+          "visibility": "public",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:34:46Z",
+          "active": true,
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "dotagents_tree": false,
+            "ci_workflows": 0,
+            "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [
+              "feature-request.yaml",
+              "vulnerability-fix.yaml"
+            ],
+            "governance": true,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "unknown",
+              "note": "no agent workflows found, gate not applicable yet"
+            }
+          ],
+          "level": 4,
+          "level_name": "governed"
         },
         {
           "name": "community-profiles",
@@ -142,6 +243,9 @@
             "agent_workflows": [
               "issue-triage.yml"
             ],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -170,45 +274,6 @@
           "level_name": "delegated"
         },
         {
-          "name": "channels",
-          "visibility": "public",
-          "default_branch": "main",
-          "pushed_at": "2026-08-08T02:34:44Z",
-          "active": true,
-          "signals": {
-            "agents_md": false,
-            "claude_md": false,
-            "dotagents_tree": false,
-            "ci_workflows": 3,
-            "agent_workflows": [],
-            "docs": "adequate"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "unknown",
-              "note": "no agent workflows found, gate not applicable yet"
-            }
-          ],
-          "level": 0,
-          "level_name": "none"
-        },
-        {
           "name": "pensieve",
           "visibility": "public",
           "default_branch": "main",
@@ -220,6 +285,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -248,47 +316,6 @@
           "level_name": "none"
         },
         {
-          "name": "outfitter",
-          "visibility": "public",
-          "default_branch": "main",
-          "pushed_at": "2026-08-07T21:00:13Z",
-          "active": true,
-          "signals": {
-            "agents_md": true,
-            "claude_md": false,
-            "dotagents_tree": false,
-            "ci_workflows": 5,
-            "agent_workflows": [
-              "issue-triage.yml"
-            ],
-            "docs": "adequate"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "pass",
-              "note": "effective rules: [pull_request, required_status_checks, merge_queue]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "fail",
-              "note": "agent workflows present but no session-capture landing gate found"
-            }
-          ],
-          "level": 3,
-          "level_name": "automated"
-        },
-        {
           "name": "wiki",
           "visibility": "private",
           "default_branch": "main",
@@ -300,6 +327,9 @@
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -339,6 +369,9 @@
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -378,6 +411,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -417,6 +453,9 @@
             "dotagents_tree": true,
             "ci_workflows": 3,
             "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -456,6 +495,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -497,6 +539,9 @@
             "agent_workflows": [
               "issue-triage.yml"
             ],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -536,6 +581,9 @@
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -575,6 +623,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -614,6 +665,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -653,6 +707,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -692,6 +749,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -731,6 +791,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -759,8 +822,8 @@
           "level_name": "assisted"
         }
       ],
-      "org_level": 1,
-      "org_level_name": "assisted",
+      "org_level": 2,
+      "org_level_name": "delegated",
       "gaps": [
         "11/12 active repos miss baseline branch protection (required checks + reviews)",
         "6/12 active repos have no AGENTS.md or CLAUDE.md",
@@ -769,56 +832,15 @@
     },
     {
       "org": "Unsupervisedcom",
-      "scanned_at": "2026-08-08T04:35:16.998Z",
+      "scanned_at": "2026-08-08T13:28:31.030Z",
       "sampling_note": "most recently pushed 30 repositories",
       "ranking_note": "ranking covers the 11 repos pushed within 7 days; 19 inactive repos are listed but not ranked",
       "repos": [
         {
-          "name": ".agents",
-          "visibility": "internal",
-          "default_branch": "main",
-          "pushed_at": "2026-08-08T04:34:55Z",
-          "active": true,
-          "signals": {
-            "agents_md": true,
-            "claude_md": true,
-            "dotagents_tree": false,
-            "ci_workflows": 3,
-            "agent_workflows": [
-              "publish-agent-image.yml"
-            ],
-            "docs": "thin"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "fail",
-              "note": "agent workflows present but no session-capture landing gate found"
-            }
-          ],
-          "level": 2,
-          "level_name": "delegated"
-        },
-        {
           "name": "tarot",
           "visibility": "private",
           "default_branch": "main",
-          "pushed_at": "2026-08-08T03:17:41Z",
+          "pushed_at": "2026-08-08T12:52:44Z",
           "active": true,
           "signals": {
             "agents_md": false,
@@ -826,6 +848,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -854,6 +879,95 @@
           "level_name": "assisted"
         },
         {
+          "name": "2119",
+          "visibility": "public",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T09:08:17Z",
+          "active": true,
+          "signals": {
+            "agents_md": true,
+            "claude_md": false,
+            "dotagents_tree": false,
+            "ci_workflows": 2,
+            "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "unknown",
+              "note": "no agent workflows found, gate not applicable yet"
+            }
+          ],
+          "level": 1,
+          "level_name": "assisted"
+        },
+        {
+          "name": ".agents",
+          "visibility": "internal",
+          "default_branch": "main",
+          "pushed_at": "2026-08-08T04:34:55Z",
+          "active": true,
+          "signals": {
+            "agents_md": true,
+            "claude_md": true,
+            "dotagents_tree": false,
+            "ci_workflows": 3,
+            "agent_workflows": [
+              "publish-agent-image.yml"
+            ],
+            "catalog": true,
+            "declared_workflows": [
+              "feature-request.yaml",
+              "vulnerability-fix.yaml"
+            ],
+            "governance": true,
+            "docs": "thin"
+          },
+          "baseline": [
+            {
+              "rule": "branch-protection",
+              "status": "fail",
+              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
+            },
+            {
+              "rule": "agent-identities",
+              "status": "unknown",
+              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
+            },
+            {
+              "rule": "teams.reviewers",
+              "status": "unknown",
+              "note": "team membership requires org admin read; not queried"
+            },
+            {
+              "rule": "evidence.landing-gate",
+              "status": "fail",
+              "note": "agent workflows present but no session-capture landing gate found"
+            }
+          ],
+          "level": 4,
+          "level_name": "governed"
+        },
+        {
           "name": "mainapp-exp-ref",
           "visibility": "private",
           "default_branch": "mini/compute-dockerfile-arch",
@@ -867,6 +981,9 @@
             "agent_workflows": [
               "copilot-setup-steps.yml"
             ],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -908,6 +1025,9 @@
             "agent_workflows": [
               "copilot-setup-steps.yml"
             ],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -947,6 +1067,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -986,6 +1109,9 @@
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1025,6 +1151,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1064,6 +1193,9 @@
             "dotagents_tree": true,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1106,6 +1238,9 @@
               "claude-code-test.yml",
               "copilot-setup-steps.yml"
             ],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1134,45 +1269,6 @@
           "level_name": "automated"
         },
         {
-          "name": "2119",
-          "visibility": "public",
-          "default_branch": "main",
-          "pushed_at": "2026-08-03T18:15:49Z",
-          "active": true,
-          "signals": {
-            "agents_md": true,
-            "claude_md": false,
-            "dotagents_tree": false,
-            "ci_workflows": 2,
-            "agent_workflows": [],
-            "docs": "thin"
-          },
-          "baseline": [
-            {
-              "rule": "branch-protection",
-              "status": "fail",
-              "note": "effective rules: [none]; baseline wants required-checks [\"ci\"], required-reviews 1"
-            },
-            {
-              "rule": "agent-identities",
-              "status": "unknown",
-              "note": "bot capability caps are org-level configuration, not visible in a repo scan"
-            },
-            {
-              "rule": "teams.reviewers",
-              "status": "unknown",
-              "note": "team membership requires org admin read; not queried"
-            },
-            {
-              "rule": "evidence.landing-gate",
-              "status": "unknown",
-              "note": "no agent workflows found, gate not applicable yet"
-            }
-          ],
-          "level": 1,
-          "level_name": "assisted"
-        },
-        {
           "name": "unsupervised-website",
           "visibility": "private",
           "default_branch": "main",
@@ -1184,6 +1280,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1223,6 +1322,9 @@
             "dotagents_tree": false,
             "ci_workflows": 3,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1262,6 +1364,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "none"
           },
           "baseline": [
@@ -1301,6 +1406,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1340,6 +1448,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1379,6 +1490,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": true,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1403,8 +1517,8 @@
               "note": "no agent workflows found, gate not applicable yet"
             }
           ],
-          "level": 0,
-          "level_name": "none"
+          "level": 2,
+          "level_name": "delegated"
         },
         {
           "name": "active-job-kubernetes",
@@ -1418,6 +1532,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1457,6 +1574,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1496,6 +1616,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1535,6 +1658,9 @@
             "dotagents_tree": false,
             "ci_workflows": 4,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1574,6 +1700,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1613,6 +1742,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "adequate"
           },
           "baseline": [
@@ -1652,6 +1784,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1691,6 +1826,9 @@
             "dotagents_tree": false,
             "ci_workflows": 1,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1730,6 +1868,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1769,6 +1910,9 @@
             "dotagents_tree": false,
             "ci_workflows": 2,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1808,6 +1952,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "none"
           },
           "baseline": [
@@ -1849,6 +1996,9 @@
             "agent_workflows": [
               "triage.yml"
             ],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1888,6 +2038,9 @@
             "dotagents_tree": false,
             "ci_workflows": 4,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "thin"
           },
           "baseline": [
@@ -1927,6 +2080,9 @@
             "dotagents_tree": false,
             "ci_workflows": 0,
             "agent_workflows": [],
+            "catalog": false,
+            "declared_workflows": [],
+            "governance": false,
             "docs": "none"
           },
           "baseline": [

@@ -15,6 +15,11 @@ export const Signals = z.object({
   dotagents_tree: z.boolean(),
   ci_workflows: z.number().int().min(0),
   agent_workflows: z.array(z.string()),
+  // Catalog-repo signals: an Outfitter catalog carries its payload at the
+  // repo root, so .agents/ and .github/workflows/ heuristics miss it.
+  catalog: z.boolean(),
+  declared_workflows: z.array(z.string()),
+  governance: z.boolean(),
   docs: z.enum(["none", "thin", "adequate"]),
 });
 

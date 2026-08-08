@@ -20,6 +20,7 @@ const no = "—";
       <tr>
         <td>
           <code>{repo.name}</code>{" "}
+          {repo.signals.catalog && <span class="badge">catalog</span>}{" "}
           {repo.visibility === "private" && <span class="dim">(private)</span>}
         </td>
         <td>
@@ -30,10 +31,17 @@ const no = "—";
         <td>{repo.signals.agents_md || repo.signals.claude_md ? yes : no}</td>
         <td>{repo.signals.dotagents_tree ? yes : no}</td>
         <td>
-          {repo.signals.agent_workflows.length > 0 ? (
+          {repo.signals.agent_workflows.length === 0 &&
+            repo.signals.declared_workflows.length === 0 &&
+            no}
+          {repo.signals.agent_workflows.length > 0 && (
             <code>{repo.signals.agent_workflows.join(", ")}</code>
-          ) : (
-            no
+          )}
+          {repo.signals.declared_workflows.length > 0 && (
+            <div>
+              <code>{repo.signals.declared_workflows.join(", ")}</code>{" "}
+              <span class="dim">declared{repo.signals.governance ? " · governed" : ""}</span>
+            </div>
           )}
         </td>
         <td>

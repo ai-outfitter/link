@@ -59,6 +59,18 @@ function classifySignals(paths: string[]): Signals {
     (p) => p.startsWith(".github/workflows/") && /\.ya?ml$/.test(p),
   );
   const docCount = paths.filter((p) => p.startsWith("docs/") && p.endsWith(".md")).length;
+  // A catalog repo carries its dotagents payload at the repository root.
+  const catalog =
+    paths.some((p) => /^agents\/[^/]+\/agent\.md$/.test(p)) ||
+    paths.some((p) => /^skills\/[^/]+\/SKILL\.md$/.test(p)) ||
+    has("settings.yml");
+  // Declared workflows count only when the meta-schema is carried beside
+  // them — the validated-contract marker, not just a directory name.
+  const declaredWorkflows = has("spec/agent-workflow.v1.schema.json")
+    ? paths
+        .filter((p) => /^workflows\/[^/]+\.ya?ml$/.test(p))
+        .map((p) => p.replace("workflows/", ""))
+    : [];
   return Signals.parse({
     agents_md: has("AGENTS.md"),
     claude_md: has("CLAUDE.md"),
@@ -67,6 +79,9 @@ function classifySignals(paths: string[]): Signals {
     agent_workflows: ciWorkflows
       .filter((p) => AGENT_WORKFLOW_HINT.test(p))
       .map((p) => p.replace(".github/workflows/", "")),
+    catalog,
+    declared_workflows: declaredWorkflows,
+    governance: paths.some((p) => /^governance\/.+\.ya?ml$/.test(p)),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
   });
 }
@@ -118,9 +133,12 @@ function auditBaseline(
 }
 
 function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
+  // A shared catalog carrying validated workflow definitions and a
+  // governance policy is the level-4 marker on the adoption ramp.
+  if (signals.catalog && signals.declared_workflows.length > 0 && signals.governance) return 4;
   const bp = baseline.find((c) => c.rule === "branch-protection");
   if (signals.agent_workflows.length > 0 && bp?.status === "pass") return 3;
-  if (signals.agent_workflows.length > 0 || signals.dotagents_tree) return 2;
+  if (signals.catalog || signals.agent_workflows.length > 0 || signals.dotagents_tree) return 2;
   if (signals.agents_md || signals.claude_md) return 1;
   return 0;
 }
@@ -210,6 +228,13 @@ async function scanOrg(org: string): Promise<OrgReport> {
   const noInstructions = ranked.filter((r) => !r.signals.agents_md && !r.signals.claude_md);
   if (noInstructions.length > 0)
     gaps.push(`${noInstructions.length}/${ranked.length} active repos have no AGENTS.md or CLAUDE.md`);
+  const governedCatalog = ranked.some(
+    (r) => r.signals.catalog && r.signals.declared_workflows.length > 0 && r.signals.governance,
+  );
+  if (!governedCatalog)
+    gaps.push(
+      "no governed catalog found: no active repo carries validated workflow definitions beside a governance policy",
+    );
   const withAgents = ranked.filter((r) => r.signals.agent_workflows.length > 0);
   if (withAgents.length > 0)
     gaps.push(
