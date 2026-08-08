@@ -142,6 +142,7 @@ function classifySignals(paths: string[], agentsMdBody: string | null): Signals 
     copilot_agent: ciWorkflows.some((p) => p.includes("copilot-setup-steps")),
     resident_deploy:
       (catalog || dotagentsTree) && paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
+    deploy_manifests: paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
   });
 }
@@ -254,7 +255,12 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
   // resident agents with deployment manifests. The org/user's .agents
   // catalog is the canonical place this evidence lives.
   const sovereignCI = ranked.filter((r) => r.signals.agent_workflows.length > 0);
-  const resident = ranked.filter((r) => r.signals.resident_deploy);
+  // Residency: payload and deploy manifests in one repo, or split across
+  // the org — a catalog repo plus a sibling repo carrying deploy/ manifests.
+  const hasCatalog = ranked.some((r) => r.signals.catalog);
+  const resident = ranked.filter(
+    (r) => r.signals.resident_deploy || (hasCatalog && r.signals.deploy_manifests),
+  );
   const declared = ranked.filter((r) => r.signals.declared_workflows.length > 0);
   const smoketestParts: string[] = [];
   if (sovereignCI.length > 0)

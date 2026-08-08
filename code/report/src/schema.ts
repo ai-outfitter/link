@@ -35,6 +35,9 @@ export const Signals = z.object({
   // agent deployment (self-hosted, e.g. via agent-operator), not a SaaS
   // coding agent.
   resident_deploy: z.boolean(),
+  // deploy/ manifests alone; residency also counts when the org keeps its
+  // catalog in a sibling repo (the catalog-apart-from-deployment shape).
+  deploy_manifests: z.boolean(),
   docs: z.enum(["none", "thin", "adequate"]),
 });
 
