@@ -488,33 +488,100 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
   return results;
 }
 
-async function scanSource(source: Source): Promise<OrgReport> {
-  const activeCutoff = Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-  let inputs: (RepoInput | null)[];
-  let samplingNote: string;
+// A scan unit merges every source that resolves to the same canonical
+// identity (host/owner from git remotes): a GitHub org and the local
+// folder of its clones are the same organization seen from two sides.
+type ScanUnit = {
+  label: string;
+  identity: string | null;
+  org: string | null;
+  folders: { root: string; dirs: string[] }[];
+};
 
-  if (source.type === "github-org") {
+const REMOTE_OWNER = /(?:@|\/\/)([^/:@]+)(?::\d+)?[:/]([^/]+)\//;
+
+async function repoIdentity(dir: string): Promise<string | null> {
+  const url = await git(dir, ["remote", "get-url", "origin"]);
+  const m = url?.match(REMOTE_OWNER);
+  return m ? `${m[1].toLowerCase()}/${m[2].toLowerCase()}` : null;
+}
+
+async function buildUnits(sources: Source[]): Promise<ScanUnit[]> {
+  const units: ScanUnit[] = sources
+    .filter((s) => s.type === "github-org")
+    .map((s) => ({
+      label: s.target,
+      identity: `github.com/${s.target.toLowerCase()}`,
+      org: s.target,
+      folders: [],
+    }));
+  for (const source of sources.filter((s) => s.type === "folder")) {
+    const dirs = listRepoDirs(source.target);
+    const ids = await mapLimit(dirs, CONCURRENCY, repoIdentity);
+    const counts = new Map<string, number>();
+    for (const id of ids) if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const identity = top && top[1] * 2 > dirs.length ? top[0] : null;
+    const existing = identity ? units.find((u) => u.identity === identity) : undefined;
+    if (existing) existing.folders.push({ root: source.target, dirs });
+    else
+      units.push({
+        label: identity ?? source.target,
+        identity,
+        org: null,
+        folders: [{ root: source.target, dirs }],
+      });
+  }
+  return units;
+}
+
+async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
+  const activeCutoff = Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const inputs: (RepoInput | null)[] = [];
+  const notes: string[] = [];
+
+  if (unit.org !== null) {
     const listings = await ghJson<RepoListing[]>([
       "repo",
       "list",
-      source.target,
+      unit.org,
       "--json",
       "name,visibility,defaultBranchRef,pushedAt",
       "--limit",
       String(REPO_LIMIT),
     ]);
-    if (listings === null) throw new Error(`cannot list repositories for ${source.target}`);
+    if (listings === null) throw new Error(`cannot list repositories for ${unit.org}`);
     const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
-    inputs = await mapLimit(sorted, CONCURRENCY, (l) => scanGithubRepo(source.target, l));
-    samplingNote =
+    inputs.push(...(await mapLimit(sorted, CONCURRENCY, (l) => scanGithubRepo(unit.org!, l))));
+    notes.push(
       listings.length >= REPO_LIMIT
         ? `most recently pushed ${REPO_LIMIT} repositories`
-        : `all ${listings.length} repositories`;
-  } else {
-    const dirs = listRepoDirs(source.target);
-    inputs = await mapLimit(dirs, CONCURRENCY, (d) => scanLocalRepo(source.target, d));
-    samplingNote = `${dirs.length} local checkouts under ${source.target}`;
+        : `all ${listings.length} repositories`,
+    );
   }
+
+  // Local checkouts of repos the forge scan already covered are the same
+  // repo, not a second one; only local-only checkouts are appended.
+  const forgeNames = new Set(
+    inputs.filter((r): r is RepoInput => r !== null).map((r) => basename(r.name).toLowerCase()),
+  );
+  const seenDirs = new Set<string>();
+  for (const folder of unit.folders) {
+    const fresh = folder.dirs.filter((d) => !seenDirs.has(d));
+    fresh.forEach((d) => seenDirs.add(d));
+    const locals = await mapLimit(fresh, CONCURRENCY, (d) => scanLocalRepo(folder.root, d));
+    const localOnly = locals.filter(
+      (r): r is RepoInput => r !== null && !forgeNames.has(basename(r.name).toLowerCase()),
+    );
+    localOnly.forEach((r) => forgeNames.add(basename(r.name).toLowerCase()));
+    inputs.push(...localOnly);
+    notes.push(
+      unit.org !== null
+        ? `${localOnly.length} local-only checkouts under ${folder.root} (${fresh.length - localOnly.length} matched forge repos)`
+        : `${fresh.length} local checkouts under ${folder.root}`,
+    );
+  }
+  const samplingNote = notes.join("; ");
 
   const repos = inputs
     .filter((r): r is RepoInput => r !== null)
@@ -549,8 +616,14 @@ async function scanSource(source: Source): Promise<OrgReport> {
     );
 
   return OrgReport.parse({
-    org: source.target,
-    source_type: source.type,
+    org: unit.label,
+    source_type:
+      unit.org !== null && unit.folders.length > 0
+        ? "github-org+folder"
+        : unit.org !== null
+          ? "github-org"
+          : "folder",
+    identity: unit.identity,
     scanned_at: new Date().toISOString(),
     sampling_note: samplingNote,
     ranking_note: `ranking covers the ${ranked.length} active catalog/application repos; ${repos.length - ranked.length} inactive or meta repos are listed but not ranked`,
@@ -605,7 +678,7 @@ if (sources.length === 0) {
 const report = Report.parse({
   generated_at: new Date().toISOString(),
   baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
-  orgs: await mapLimit(sources, 2, scanSource),
+  orgs: await mapLimit(await buildUnits(sources), 2, scanUnit),
   evidence_limits: [
     "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
     "absence of evidence is recorded as absence, not as a negative fact",

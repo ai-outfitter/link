@@ -68,7 +68,10 @@ export const RepoReport = z.object({
 
 export const OrgReport = z.object({
   org: z.string(),
-  source_type: z.enum(["github-org", "folder"]),
+  source_type: z.enum(["github-org", "folder", "github-org+folder"]),
+  // Canonical identity resolved from git remotes (host/owner), used to
+  // merge a local checkout folder with the forge org it clones.
+  identity: z.string().nullable(),
   scanned_at: z.string(),
   sampling_note: z.string(),
   ranking_note: z.string(),
