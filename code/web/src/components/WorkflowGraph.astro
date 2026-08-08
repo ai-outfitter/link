@@ -1,0 +1,161 @@
+---
+import { buildGraph, type GNode } from "../lib/workflow-graph.ts";
+
+const { doc } = Astro.props;
+const graph = buildGraph(doc);
+
+const NODE_W = 190;
+const ROW_H = 96;
+const PAD = 24;
+const COL_X = [PAD + 90, PAD + 90 + 300];
+const LEFT_LANE = PAD; // dashed data edges run in this lane
+
+const nodeH = (n: GNode) => 30 + n.sub.length * 13;
+const x = (n: GNode) => COL_X[n.col];
+const y = (n: GNode) => PAD + n.row * ROW_H;
+const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+
+const width = COL_X[graph.cols - 1] + NODE_W + PAD + 40;
+const height = PAD + (graph.rows - 1) * ROW_H + 80;
+
+const flow = graph.edges.filter((e) => e.kind === "flow");
+const routes = graph.edges.filter((e) => e.kind === "route");
+const data = graph.edges.filter((e) => e.kind === "data");
+
+const facetColor: Record<string, string> = {
+  signal: "#5b8dd6",
+  decision: "#c08a2d",
+  review: "#9a6bd0",
+  terminal: "#3d9d6a",
+};
+const nodeStroke = (n: GNode) =>
+  n.facets.length > 0 ? facetColor[n.facets[0]] : "currentColor";
+---
+
+<svg
+  viewBox={`0 0 ${width} ${height}`}
+  width={width}
+  role="img"
+  aria-label={`Process graph for ${doc.name}`}
+  class="wf-graph"
+>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.7"></path>
+    </marker>
+  </defs>
+
+  {/* control-flow spine */}
+  {flow.map((e) => {
+    const a = byId.get(e.from)!;
+    const b = byId.get(e.to)!;
+    const x1 = x(a) + NODE_W / 2;
+    const y1 = y(a) + nodeH(a);
+    const y2 = y(b);
+    return (
+      <g>
+        <line x1={x1} y1={y1} x2={x1} y2={y2} stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)" opacity="0.75" />
+        {e.label && (
+          <text x={x1 + 7} y={(y1 + y2) / 2 + 3} class="edge-label">{e.label}</text>
+        )}
+      </g>
+    );
+  })}
+
+  {/* declared routes to terminals */}
+  {routes.map((e) => {
+    const a = byId.get(e.from)!;
+    const b = byId.get(e.to)!;
+    const x1 = x(a) + NODE_W;
+    const y1 = y(a) + nodeH(a) / 2;
+    const x2 = x(b);
+    const y2 = y(b) + nodeH(b) / 2;
+    const mx = (x1 + x2) / 2;
+    return (
+      <g>
+        <path
+          d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+          fill="none"
+          stroke={facetColor.terminal}
+          stroke-width="1.3"
+          marker-end="url(#arrow)"
+        />
+        <text x={mx} y={Math.min(y1, y2) + Math.abs(y2 - y1) / 2 - 6} text-anchor="middle" class="edge-label route">
+          {e.label}
+        </text>
+      </g>
+    );
+  })}
+
+  {/* typed data handoffs (with:, runs-on:) in the left lane */}
+  {data.map((e, i) => {
+    const a = byId.get(e.from)!;
+    const b = byId.get(e.to)!;
+    const lane = LEFT_LANE + 66 - (i % 5) * 15;
+    const y1 = y(a) + nodeH(a) / 2;
+    const y2 = y(b) + nodeH(b) / 2 - 6 + (i % 3) * 6;
+    const labelY = (y1 + y2) / 2 - 3 + (i % 3) * 11;
+    return (
+      <g opacity="0.65">
+        <path
+          d={`M ${x(a)} ${y1} C ${lane} ${y1}, ${lane} ${y2}, ${x(b)} ${y2}`}
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1"
+          stroke-dasharray="4 3"
+          marker-end="url(#arrow)"
+        />
+        <text x={lane - 2} y={labelY} text-anchor="middle" class="edge-label">
+          {e.label}
+        </text>
+      </g>
+    );
+  })}
+
+  {/* task nodes */}
+  {graph.nodes.map((n) => (
+    <g>
+      <rect
+        x={x(n)}
+        y={y(n)}
+        width={NODE_W}
+        height={nodeH(n)}
+        rx="7"
+        fill="transparent"
+        stroke={nodeStroke(n)}
+        stroke-width="1.4"
+      />
+      <text x={x(n) + 10} y={y(n) + 17} class="node-title">
+        {n.label}
+      </text>
+      {n.facets.length > 0 && (
+        <text x={x(n) + NODE_W - 8} y={y(n) + 16} text-anchor="end" class="facets" fill={nodeStroke(n)}>
+          {n.facets.join(" · ")}
+        </text>
+      )}
+      {n.sub.map((line, i) => (
+        <text x={x(n) + 10} y={y(n) + 30 + i * 13} class="node-sub">
+          {line}
+        </text>
+      ))}
+    </g>
+  ))}
+</svg>
+
+<p class="dim legend">
+  facets:
+  {Object.entries(facetColor).map(([facet, color]) => (
+    <span style={`color:${color}`}>■ {facet} </span>
+  ))}
+  &middot; solid = control flow &middot; green curve = declared route &middot; dashed = typed data handoff (<code>with:</code>)
+</p>
+
+<style>
+  .wf-graph { max-width: 100%; height: auto; display: block; margin: 0.5rem 0; }
+  .node-title { font: 600 12px ui-monospace, monospace; fill: currentColor; }
+  .node-sub { font: 10px ui-monospace, monospace; fill: currentColor; opacity: 0.6; }
+  .facets { font: 9px system-ui, sans-serif; }
+  .edge-label { font: 10px ui-monospace, monospace; fill: currentColor; opacity: 0.75; }
+  .edge-label.route { fill: #3d9d6a; opacity: 1; }
+  .legend { font-size: 0.8em; }
+</style>
