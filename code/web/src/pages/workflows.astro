@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import Base from "../layouts/Base.astro";
 import WorkflowGraph from "../components/WorkflowGraph.astro";
 import workflows from "../data/workflows.json";
+import "../styles/workflows.css";
 
 const digest = (raw: string) =>
   createHash("sha256").update(raw).digest("hex").slice(0, 12);
@@ -103,36 +104,3 @@ const ifParts = (expr: string) => {
   }
 </Base>
 
-<style>
-  .wf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-  .digest { color: var(--faint); font-size: 0.72rem; letter-spacing: 0.04em; }
-  .trigger-line { margin: 0.1rem 0 0; color: var(--dim); font-size: 0.82rem; }
-  .tevent { color: var(--signal); font-weight: 600; }
-  .tsep { color: var(--faint); margin: 0 0.5em; }
-  .steps { list-style: none; counter-reset: step; margin: 0.5rem 0 1.25rem; padding: 0; }
-  .steps li {
-    counter-increment: step;
-    display: grid;
-    grid-template-columns: 15rem 1fr;
-    gap: 0.35rem 1.25rem;
-    padding: 0.55rem 0;
-    border-top: 1px solid var(--hairline);
-  }
-  .steps li::before {
-    content: counter(step, decimal-leading-zero);
-    position: absolute;
-    margin-left: -2.1rem;
-    color: var(--faint);
-    font-size: 0.7rem;
-    padding-top: 0.15rem;
-  }
-  .step-head { display: flex; flex-direction: column; gap: 0.1rem; }
-  .step-id { font-weight: 600; }
-  .does { color: var(--dim); font-size: 0.78rem; }
-  .step-detail { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; align-content: start; font-size: 0.78rem; color: var(--dim); }
-  .kv code { color: var(--text); }
-  .route-kv code:last-child { color: var(--terminal); }
-  @media (max-width: 720px) {
-    .steps li { grid-template-columns: 1fr; }
-  }
-</style>

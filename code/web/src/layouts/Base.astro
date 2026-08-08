@@ -3,6 +3,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 import "@fontsource/instrument-serif/400.css";
+import "../styles/global.css";
 
 const { title } = Astro.props;
 const path = Astro.url.pathname;
@@ -25,123 +26,5 @@ const path = Astro.url.pathname;
       <slot />
     </main>
     <footer>drawn from frozen definitions &middot; read-only surface</footer>
-    <style is:global>
-      :root {
-        --bg: #0a0f1d;
-        --panel: #0e1526;
-        --panel-2: #111a30;
-        --line: #24314f;
-        --hairline: #1a2440;
-        --text: #d6e1f5;
-        --dim: #7b8db0;
-        --faint: #4e5f82;
-        --signal: #6fa8ff;
-        --decision: #e0b153;
-        --review: #c08bf0;
-        --terminal: #5fc98f;
-        --mono: "IBM Plex Mono", ui-monospace, monospace;
-        --display: "Instrument Serif", Georgia, serif;
-      }
-      * { box-sizing: border-box; }
-      html { color-scheme: dark; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        color: var(--text);
-        background:
-          radial-gradient(1100px 500px at 75% -10%, #14204011 0%, transparent 60%),
-          repeating-linear-gradient(0deg, transparent 0 27px, #16203a55 27px 28px),
-          repeating-linear-gradient(90deg, transparent 0 27px, #16203a55 27px 28px),
-          var(--bg);
-        font: 400 13.5px/1.6 var(--mono);
-        padding: 0 clamp(1rem, 4vw, 3rem) 3rem;
-      }
-      main { max-width: 68rem; margin: 0 auto; }
-      nav {
-        max-width: 68rem;
-        margin: 0 auto;
-        display: flex;
-        gap: 1.5rem;
-        align-items: center;
-        padding: 1.1rem 0 1rem;
-        border-bottom: 1px solid var(--line);
-        margin-bottom: 2rem;
-      }
-      .wordmark { font: 400 1.55rem/1 var(--display); letter-spacing: 0.02em; }
-      nav .rule { flex: 0 0 2.5rem; height: 1px; background: var(--line); }
-      nav a {
-        color: var(--dim);
-        text-decoration: none;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        font-size: 0.72rem;
-      }
-      nav a.active, nav a:hover { color: var(--text); }
-      nav a.active { border-bottom: 1px solid var(--signal); padding-bottom: 2px; }
-      footer {
-        max-width: 68rem;
-        margin: 4rem auto 0;
-        color: var(--faint);
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.14em;
-        border-top: 1px solid var(--hairline);
-        padding-top: 0.8rem;
-      }
-      h1 {
-        font: 400 2.4rem/1.15 var(--display);
-        margin: 0 0 0.35rem;
-        letter-spacing: 0.01em;
-      }
-      h2 { font: 400 1.5rem/1.2 var(--display); margin: 0 0 0.25rem; }
-      a { color: var(--signal); }
-      code { font-family: var(--mono); font-size: 0.95em; }
-      pre {
-        overflow-x: auto;
-        padding: 1rem;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        font-size: 0.82rem;
-        line-height: 1.5;
-      }
-      table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
-      th, td { text-align: left; padding: 0.42rem 0.7rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
-      th {
-        font-weight: 500;
-        color: var(--dim);
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 0.68rem;
-      }
-      .dim { color: var(--dim); }
-      .badge {
-        display: inline-block;
-        border: 1px solid var(--line);
-        padding: 0 0.55em;
-        font-size: 0.72rem;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-        color: var(--dim);
-      }
-      .badge.pass { border-color: var(--terminal); color: var(--terminal); }
-      .badge.fail { border-color: #d0685f; color: #d0685f; }
-      .badge.level { color: var(--text); border-color: var(--faint); }
-      section.card {
-        background: linear-gradient(180deg, var(--panel-2), var(--panel));
-        border: 1px solid var(--line);
-        padding: 1.4rem 1.6rem 1.2rem;
-        margin: 1.4rem 0 2.2rem;
-        position: relative;
-      }
-      section.card::before {
-        content: "";
-        position: absolute;
-        inset: 6px;
-        border: 1px solid var(--hairline);
-        pointer-events: none;
-      }
-      section.card > * { position: relative; }
-      details summary { cursor: pointer; color: var(--dim); }
-    </style>
   </body>
 </html>

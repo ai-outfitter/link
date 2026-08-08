@@ -1,0 +1,51 @@
+.wf-graph {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.75rem 0 0.25rem;
+}
+.wf-graph .node-title {
+  font: 600 12px var(--mono);
+  fill: var(--text);
+}
+.wf-graph .node-sub {
+  font: 10px var(--mono);
+  fill: var(--dim);
+}
+.wf-graph .facet-tag {
+  font: 500 8.5px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.wf-graph .edge-label {
+  font: 10px var(--mono);
+  fill: var(--dim);
+}
+.wf-graph .edge-label.route {
+  fill: var(--terminal);
+}
+.wf-graph .wire-label {
+  font: 9px var(--mono);
+  fill: var(--faint);
+  letter-spacing: 0.04em;
+}
+.wf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: center;
+  color: var(--dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0.25rem 0 1.25rem;
+}
+.wf-legend .swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.4em;
+}
+.wf-legend .sep {
+  color: var(--hairline);
+}

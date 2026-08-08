@@ -1,5 +1,6 @@
 ---
 import { buildGraph, type GNode } from "../lib/workflow-graph.ts";
+import "../styles/workflow-graph.css";
 
 const { doc } = Astro.props;
 const graph = buildGraph(doc);
@@ -160,7 +161,7 @@ const R = 7; // wire corner radius
   })}
 </svg>
 
-<p class="legend">
+<p class="wf-legend">
   {Object.entries(facetColor).map(([facet, color]) => (
     <span><span class="swatch" style={`background:${color}`}></span>{facet}</span>
   ))}
@@ -170,25 +171,3 @@ const R = 7; // wire corner radius
   <span>┄ typed handoff</span>
 </p>
 
-<style>
-  .wf-graph { max-width: 100%; height: auto; display: block; margin: 0.75rem 0 0.25rem; }
-  .node-title { font: 600 12px var(--mono); fill: var(--text); }
-  .node-sub { font: 10px var(--mono); fill: var(--dim); }
-  .facet-tag { font: 500 8.5px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-  .edge-label { font: 10px var(--mono); fill: var(--dim); }
-  .edge-label.route { fill: var(--terminal); }
-  .wire-label { font: 9px var(--mono); fill: var(--faint); letter-spacing: 0.04em; }
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.9rem;
-    align-items: center;
-    color: var(--dim);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin: 0.25rem 0 1.25rem;
-  }
-  .legend .swatch { display: inline-block; width: 8px; height: 8px; margin-right: 0.4em; }
-  .legend .sep { color: var(--hairline); }
-</style>
