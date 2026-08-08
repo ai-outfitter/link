@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "github-read": {
+      "type": "stdio",
+      "command": "github-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "GITHUB_READ_ONLY": "true",
+        "GITHUB_TOOLSETS": "issues,pull_requests"
+      }
+    },
+    "kube-read": {
+      "type": "stdio",
+      "command": "kubernetes-mcp-server",
+      "args": ["--read-only", "--cluster-provider", "in-cluster"]
+    }
+  }
+}

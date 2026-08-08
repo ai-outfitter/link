@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "assessment-output",
+  "description": "A vulnerability assessment step's output: the affected/not-affected decision beside a summary and the work graph carrying the evidence and, when affected, the remediation plan's change nodes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "summary", "graph"],
+  "properties": {
+    "decision": { "enum": ["affected", "not-affected"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "graph": { "$ref": "../../spec/work-graph.v1.schema.json" }
+  }
+}

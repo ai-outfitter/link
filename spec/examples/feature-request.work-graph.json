@@ -1,0 +1,56 @@
+{
+  "kind": "work-graph/v1",
+  "about": {
+    "title": "Add zone API routes",
+    "issue": "https://github.com/example/app/issues/42",
+    "pull-request": "https://github.com/example/app/pull/57"
+  },
+  "nodes": [
+    {
+      "id": "issue-zone-api",
+      "type": "issue",
+      "title": "Add zone API routes",
+      "status": "in-progress"
+    },
+    {
+      "id": "q-router-layout",
+      "type": "question",
+      "title": "Where are API routes registered and how is auth applied?"
+    },
+    {
+      "id": "ev-router-layout",
+      "type": "evidence",
+      "title": "Routes register in src/api/router.ts; auth middleware wraps at mount",
+      "anchors": [
+        { "path": "src/api/router.ts", "lines": "18-42", "role": "read", "note": "route registration table" },
+        { "path": "src/api/middleware/auth.ts", "symbol": "requireSession", "role": "read" }
+      ]
+    },
+    {
+      "id": "change-zone-routes",
+      "type": "change",
+      "title": "Add zone CRUD routes behind requireSession",
+      "status": "done",
+      "anchors": [
+        { "path": "src/api/zones.ts", "role": "create", "note": "new route module" },
+        { "path": "src/api/router.ts", "lines": "42", "role": "edit", "note": "mount /zones" },
+        { "path": "test/api/zones.test.ts", "role": "test" }
+      ]
+    },
+    {
+      "id": "finding-missing-authz",
+      "type": "finding",
+      "title": "DELETE /zones/:id lacks an ownership check",
+      "severity": "major",
+      "anchors": [
+        { "path": "src/api/zones.ts", "lines": "61-70", "role": "read" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "issue-zone-api", "to": "change-zone-routes", "type": "contains" },
+    { "from": "ev-router-layout", "to": "q-router-layout", "type": "answers" },
+    { "from": "change-zone-routes", "to": "ev-router-layout", "type": "relates-to" },
+    { "from": "finding-missing-authz", "to": "change-zone-routes", "type": "refutes" }
+  ]
+}

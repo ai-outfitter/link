@@ -1,0 +1,33 @@
+# Validates the SDLC reference configuration against its versioned
+# meta-schemas. This is the only machinery the workflows/ and governance/
+# resource kinds have today: the files are a frozen authoring surface, and
+# this job is what keeps them a contract rather than prose.
+name: Validate reference config
+
+on:
+  pull_request:
+    paths:
+      - "workflows/**"
+      - "governance/**"
+      - "spec/**"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install check-jsonschema
+        run: pipx install check-jsonschema
+      - name: Check meta-schemas
+        run: check-jsonschema --check-metaschema spec/*.schema.json workflows/schemas/*.schema.json
+      - name: Validate work-graph examples
+        run: check-jsonschema --schemafile spec/work-graph.v1.schema.json spec/examples/*.work-graph.json
+      - name: Validate agent workflows
+        run: check-jsonschema --schemafile spec/agent-workflow.v1.schema.json workflows/*.yaml
+      - name: Validate governance policies
+        run: check-jsonschema --schemafile spec/git-forge-governance.v1.schema.json governance/*.yaml

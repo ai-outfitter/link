@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# Example decision step for the feature-request reference workflow.
+#
+# A decision step prints one JSON object that conforms to the step's declared
+# output schema. Routing then reads the finite enum in that object. Because
+# the contract is the schema, this script and an LLM one-shot that returns
+# the same JSON are interchangeable — replace the logic below with your own
+# ranking (credit balances, queue depth, a model call) without touching the
+# workflow.
+set -eu
+
+if [ -n "${COPILOT_CREDITS_REMAINING:-}" ] && [ "${COPILOT_CREDITS_REMAINING}" -gt 0 ]; then
+  backend="copilot"
+  reason="bundled Copilot credits available; burn those first"
+else
+  backend="kube-agent"
+  reason="no bundled credits detected; default cluster backend"
+fi
+
+printf '{"backend":"%s","reason":"%s"}\n' "$backend" "$reason"

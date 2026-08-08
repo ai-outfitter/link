@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "review-output",
+  "description": "A review step's output: the routing decision beside the accreted work graph. The decision stays at the step-output level — not inside the graph — so `if:` routing remains enum equality over a declared finite enum.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "graph"],
+  "properties": {
+    "decision": { "enum": ["approved", "changes-requested"] },
+    "graph": { "$ref": "../../spec/work-graph.v1.schema.json" }
+  }
+}

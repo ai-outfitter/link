@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ai-outfitter/community-profiles/blob/main/spec/git-forge-governance.v1.schema.json",
+  "title": "git-forge-governance/v1",
+  "description": "Org-level governance invariants for repositories that run agent workflows. Resolved from the org/enterprise catalog layer only — a project layer must not be able to weaken a policy. Rules project onto native forge primitives (rulesets, compliance frameworks) where the forge supports them and compile to generated checks where it does not.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "name", "enforcement", "rules"],
+  "properties": {
+    "kind": { "const": "git-forge-governance/v1" },
+    "name": { "$ref": "#/$defs/slug" },
+    "enforcement": {
+      "description": "strict: non-conformant repos are refused agent workflow runs. warn: runs proceed and non-conformance is recorded in run evidence. Effective strictness may only increase over time.",
+      "enum": ["strict", "warn"]
+    },
+    "repos": {
+      "description": "Repository targeting: glob patterns and topic: selectors.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": { "$ref": "#/$defs/selectors" },
+        "exclude": { "$ref": "#/$defs/selectors" }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "branch-protection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["branches"],
+          "properties": {
+            "branches": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "required-checks": { "type": "array", "items": { "type": "string" } },
+            "required-reviews": { "type": "integer", "minimum": 0 },
+            "enforce-admins": { "type": "boolean" }
+          }
+        },
+        "agent-identities": {
+          "description": "Capability caps per agent identity. Records what a synthetic actor may and may not do on the forge.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "may": { "$ref": "#/$defs/capabilities" },
+              "may-not": { "$ref": "#/$defs/capabilities" }
+            }
+          }
+        },
+        "teams": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "role": { "type": "string" },
+              "min-members": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "capture-profile": { "type": "string" },
+            "landing-gate": { "enum": ["required", "optional"] }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "selectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": ["open-pr", "comment", "request-review", "merge", "push-protected", "manage-labels"]
+      }
+    }
+  }
+}

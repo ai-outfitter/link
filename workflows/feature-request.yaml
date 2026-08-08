@@ -1,0 +1,103 @@
+# Reference agent workflow: assigned feature/bug-fix issue -> reviewed,
+# reviewer-assigned pull request.
+#
+# Status: specification preview. This file is validated against
+# spec/agent-workflow.v1.schema.json in CI. No runtime executes it yet; it
+# freezes the authored surface the workflow compiler will consume.
+#
+# Adopt by copying this file into your org catalog under the same id and
+# editing the data: the reviewer team, the backend enum, the trigger.
+kind: agent-workflow/v1
+name: feature-request
+on:
+  issues:
+    types: [assigned]
+    assignee: outfitter-bot
+permissions:
+  contents: write
+  pull-requests: write
+workspace: checkout
+
+requires:
+  governance: sdlc-baseline
+  forge:
+    issue-templates: [feature, bug-fix]
+
+output:
+  type: object
+  additionalProperties: false
+  required: [status, summary]
+  properties:
+    status:
+      enum: [ready-for-human-review, blocked-prerequisites, revision-requested]
+    summary:
+      type: string
+      minLength: 1
+    pull-request:
+      type: string
+      format: uri
+
+steps:
+  - id: open-draft-pr
+    agent: sdlc-engineer
+    output:
+      type: object
+      additionalProperties: false
+      required: [url, branch]
+      properties:
+        url: {type: string, format: uri}
+        branch: {type: string, minLength: 1}
+
+  # The plan is a work-graph/v1 document: the issue node, the explorers'
+  # evidence nodes, and change nodes whose edit/create/test anchors are the
+  # implementer's worklist. The runtime posts it; the planner writes nothing.
+  - id: plan
+    agent: sdlc-planner
+    with:
+      issue: ${{ trigger.issue.url }}
+      pull-request: ${{ steps.open-draft-pr.output.url }}
+    posts-to: ${{ steps.open-draft-pr.output.url }}
+    output: ../spec/work-graph.v1.schema.json
+
+  # Decision step: a script (or an LLM one-shot behind the same schema)
+  # prints JSON whose enum the next step's runs-on reads. Routing decisions
+  # are recorded like any other step output, so they can be evaluated later.
+  - id: select-implementer
+    run: ./bin/rank-implementers
+    output:
+      type: object
+      additionalProperties: false
+      required: [backend, reason]
+      properties:
+        backend: {enum: [local, copilot, kube-agent, actions]}
+        reason: {type: string}
+
+  - id: implement
+    agent: sdlc-engineer
+    with:
+      plan: ${{ steps.plan.output }}
+    runs-on: ${{ steps.select-implementer.output.backend }}
+
+  # The reviewer receives the plan graph and appends finding nodes with
+  # verifies/refutes edges to its change nodes; the runtime posts them.
+  - id: review
+    agent: sdlc-reviewer
+    with:
+      plan: ${{ steps.plan.output }}
+      pull-request: ${{ steps.open-draft-pr.output.url }}
+    posts-to: ${{ steps.open-draft-pr.output.url }}
+    output: ./schemas/review-output.schema.json
+
+  - if: steps.review.output.decision == 'changes-requested'
+    emit:
+      status: revision-requested
+      summary: "Review requested changes; findings are on the pull request."
+      pull-request: ${{ steps.open-draft-pr.output.url }}
+
+  - id: undraft-and-assign
+    agent: sdlc-engineer
+    reviewers: [team:reviewers]
+    emit:
+      status: ready-for-human-review
+      summary: "Change implemented, reviewed, and assigned for human review."
+      pull-request: ${{ steps.open-draft-pr.output.url }}

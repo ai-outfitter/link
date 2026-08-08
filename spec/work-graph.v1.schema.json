@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ai-outfitter/community-profiles/blob/main/spec/work-graph.v1.schema.json",
+  "title": "work-graph/v1",
+  "description": "One shared artifact schema for SDLC handoffs. A milestone, an issue, an exploration report, an implementation plan, and a review are all the same shape: typed work nodes anchored to code locations, with typed edges between them. The graph is accretive — each pipeline stage receives it as input and returns it with that stage's nodes and edges appended, so node ids stay stable and a later stage can reference an earlier stage's nodes (a reviewer finding `refutes` a planner change). Stage profiles: an explorer adds `question`/`evidence` nodes and `answers` edges; a planner adds `feature`/`change` nodes ordered by `depends-on`, whose anchors with role `edit`/`create`/`delete`/`test` are the implementer's worklist; a reviewer adds `finding` nodes with `verifies`/`refutes` edges to the change nodes they judge. Node-id uniqueness and edge-endpoint resolution are linker checks, not schema checks — like route exclusivity in agent-workflow/v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "nodes"],
+  "properties": {
+    "kind": { "const": "work-graph/v1" },
+    "about": {
+      "description": "What this graph is about, as forge references.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "milestone": { "type": "string", "format": "uri" },
+        "issue": { "type": "string", "format": "uri" },
+        "pull-request": { "type": "string", "format": "uri" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "type": {
+          "enum": ["milestone", "issue", "feature", "question", "evidence", "change", "finding"]
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "body": { "type": "string" },
+        "status": { "enum": ["open", "planned", "in-progress", "done", "blocked"] },
+        "severity": {
+          "description": "Finding nodes only.",
+          "enum": ["blocker", "major", "minor", "nit"]
+        },
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/anchor" }
+        }
+      }
+    },
+    "anchor": {
+      "description": "A code location the node is about. Role says what the location is to the node: what an implementer edits, creates, or proves with a test, versus what was only read as evidence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "lines": { "type": "string", "pattern": "^[0-9]+(-[0-9]+)?$" },
+        "symbol": { "type": "string", "minLength": 1 },
+        "role": { "enum": ["edit", "create", "delete", "read", "test", "config"] },
+        "note": { "type": "string" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": { "$ref": "#/$defs/slug" },
+        "to": { "$ref": "#/$defs/slug" },
+        "type": {
+          "enum": ["contains", "depends-on", "answers", "touches", "tests", "verifies", "refutes", "relates-to"]
+        }
+      }
+    }
+  }
+}

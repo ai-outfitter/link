@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ai-outfitter/community-profiles/blob/main/spec/agent-workflow.v1.schema.json",
+  "title": "agent-workflow/v1",
+  "description": "Authored surface for a declarative agent workflow: a flat sequence of steps with typed outputs, enum routing, and terminal emits. This schema validates the file format only; a workflow compiler performs the deeper checks (reference resolution, route exclusivity, permission ceilings).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "name", "on", "steps"],
+  "properties": {
+    "kind": { "const": "agent-workflow/v1" },
+    "name": { "$ref": "#/$defs/slug" },
+    "on": {
+      "description": "Trigger. Keys and shapes follow the forge/channel event vocabulary.",
+      "type": "object",
+      "minProperties": 1
+    },
+    "permissions": {
+      "description": "Ceiling for the credential minted for the run. Agent loadouts must fit under it; they are never declared here.",
+      "type": "object",
+      "additionalProperties": { "enum": ["read", "write"] }
+    },
+    "workspace": { "enum": ["checkout", "none"] },
+    "requires": {
+      "description": "Preconditions verified before the first step. Governance names an org-layer git-forge-governance policy; forge lists workflow-specific observable preconditions.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "governance": {
+          "oneOf": [
+            { "$ref": "#/$defs/slug" },
+            { "type": "array", "items": { "$ref": "#/$defs/slug" }, "minItems": 1 }
+          ]
+        },
+        "forge": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "issue-templates": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "branch-protection": { "type": "object" },
+            "teams": { "type": "object" },
+            "identity": { "type": "object" }
+          }
+        }
+      }
+    },
+    "output": { "$ref": "#/$defs/outputSchema" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "ref": {
+      "description": "A typed reference to a prior step output or trigger field. References are typed value plumbing, not string templating.",
+      "type": "string",
+      "pattern": "^\\$\\{\\{\\s*[^}]+\\s*\\}\\}$"
+    },
+    "outputSchema": {
+      "description": "A closed JSON Schema for a step or workflow output, inline or as a relative file path (which may point outside the workflows directory, e.g. ../spec/work-graph.v1.schema.json). Inlined and digested identically at bake.",
+      "oneOf": [
+        { "type": "object" },
+        { "type": "string", "pattern": "^\\.\\.?/" }
+      ]
+    },
+    "emitValue": {
+      "anyOf": [
+        { "$ref": "#/$defs/ref" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" }
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["run"] },
+        { "required": ["agent"] },
+        { "required": ["uses"] },
+        { "required": ["emit"] }
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "run": {
+          "description": "Deterministic operation: a command that prints JSON conforming to the step's output schema.",
+          "type": "string",
+          "minLength": 1
+        },
+        "agent": {
+          "description": "Agent id from the resolved catalog. The agent's loadout — tools, MCP servers, subagents — is defined on the agent, never here.",
+          "$ref": "#/$defs/slug"
+        },
+        "uses": {
+          "description": "Reference to a published workflow or task, pinned by digest.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*@sha256:[0-9a-f]{64}$"
+        },
+        "with": {
+          "description": "Named inputs for the step: prior step outputs or trigger fields, passed by typed reference. The handoff is contract, not prose — an agent step receives these as its input artifacts.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/ref" }
+        },
+        "if": {
+          "description": "Enum equality over a declared prior output: steps.<id>.output.<pointer> == '<value>'. No other expression forms.",
+          "type": "string",
+          "pattern": "^steps\\.[a-z][a-z0-9-]*\\.output(\\.[A-Za-z0-9_-]+)+\\s*==\\s*'[^']*'$"
+        },
+        "emit": {
+          "description": "Ends the run with the workflow output built from literals and typed references.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/emitValue" }
+        },
+        "output": { "$ref": "#/$defs/outputSchema" },
+        "runs-on": {
+          "description": "Execution backend: a literal, or a reference to a prior decision step's finite enum, which expands per enum value at bake.",
+          "oneOf": [ { "$ref": "#/$defs/slug" }, { "$ref": "#/$defs/ref" } ]
+        },
+        "posts-to": {
+          "description": "Forge location where the runtime posts this step's output artifact. Posting is the runtime's write, not the agent's — a read-only agent's output still lands on the pull request.",
+          "$ref": "#/$defs/ref"
+        },
+        "reviewers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+# Reference git-forge governance policy for repositories that run agent
+# workflows.
+#
+# Status: readable today. sdlc-report can diff repositories against this
+# policy (read-only conformance); an apply/converge command comes later.
+#
+# Adoption ramp: ship in `warn` mode first — runs proceed, non-conformance is
+# recorded, and successive sdlc-reports show the warn fraction falling. Flip
+# `enforcement: strict` per cohort once conformance holds. Effective
+# strictness only ratchets up.
+#
+# Resolution rule: governance policies are read from the org/enterprise
+# catalog layer only. A project layer MUST NOT be able to weaken them.
+kind: git-forge-governance/v1
+name: sdlc-baseline
+enforcement: warn
+repos:
+  include: ["*"]
+  exclude: ["sandbox-*"]
+rules:
+  branch-protection:
+    branches: [main]
+    required-checks: [ci]
+    required-reviews: 1
+    enforce-admins: true
+  agent-identities:
+    outfitter-bot:
+      may: [open-pr, comment, request-review]
+      may-not: [merge, push-protected]
+  teams:
+    reviewers:
+      role: reviewer
+      min-members: 1
+  evidence:
+    capture-profile: full-trace
+    landing-gate: required
