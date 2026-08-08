@@ -1,0 +1,84 @@
+---
+import Base from "../layouts/Base.astro";
+import workflows from "../data/workflows.json";
+---
+
+<Base title="Agent workflows">
+  <h1>Defined workflows</h1>
+  <p class="dim">
+    The catalog's <code>agent-workflow/v1</code> definitions, rendered from
+    <code>workflows/</code>. Schema-validated in CI; no runtime executes them yet.
+  </p>
+
+  {
+    workflows.map(({ file, raw, doc }) => (
+      <section class="card">
+        <h2 style="margin-top:0">
+          {doc.name} <span class="dim">({file})</span>
+        </h2>
+        <p class="dim">
+          on: <code>{JSON.stringify(doc.on)}</code>
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>step</th>
+              <th>does</th>
+              <th>inputs / routing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {doc.steps.map((step, index) => (
+              <tr>
+                <td>
+                  <code>{step.id ?? `#${index + 1}`}</code>
+                </td>
+                <td>
+                  {step.agent && (
+                    <span>
+                      agent <code>{step.agent}</code>
+                    </span>
+                  )}
+                  {step.run && <code>{step.run}</code>}
+                  {step.emit && (
+                    <span>
+                      emit <code>{JSON.stringify(step.emit)}</code>
+                    </span>
+                  )}
+                </td>
+                <td>
+                  {step.if && (
+                    <div>
+                      if <code>{step.if}</code>
+                    </div>
+                  )}
+                  {step.with && (
+                    <div>
+                      with <code>{JSON.stringify(step.with)}</code>
+                    </div>
+                  )}
+                  {step["posts-to"] && (
+                    <div>
+                      posts-to <code>{step["posts-to"]}</code>
+                    </div>
+                  )}
+                  {step["runs-on"] && (
+                    <div>
+                      runs-on <code>{step["runs-on"]}</code>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <details>
+          <summary class="dim">source</summary>
+          <pre>{raw}</pre>
+        </details>
+      </section>
+    ))
+  }
+</Base>

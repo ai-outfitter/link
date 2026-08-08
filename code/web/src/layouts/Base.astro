@@ -1,0 +1,64 @@
+---
+const { title } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav>
+      <strong>link</strong>
+      <a href="/">Report</a>
+      <a href="/workflows">Workflows</a>
+    </nav>
+    <main>
+      <slot />
+    </main>
+    <style is:global>
+      :root {
+        color-scheme: light dark;
+        --line: color-mix(in srgb, currentColor 18%, transparent);
+        --dim: color-mix(in srgb, currentColor 55%, transparent);
+      }
+      body {
+        font: 15px/1.55 system-ui, sans-serif;
+        margin: 0 auto;
+        max-width: 64rem;
+        padding: 0 1.25rem 4rem;
+      }
+      nav {
+        display: flex;
+        gap: 1.25rem;
+        align-items: baseline;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 1.5rem;
+      }
+      nav a { text-decoration: none; }
+      table { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+      th, td { text-align: left; padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { font-weight: 600; }
+      code, pre { font-family: ui-monospace, monospace; font-size: 0.92em; }
+      pre { overflow-x: auto; padding: 0.75rem; border: 1px solid var(--line); border-radius: 6px; }
+      .dim { color: var(--dim); }
+      .badge {
+        display: inline-block;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 0.6em;
+        font-size: 0.85em;
+        white-space: nowrap;
+      }
+      .badge.pass { border-color: #3a3; color: #3a3; }
+      .badge.fail { border-color: #c55; color: #c55; }
+      .badge.unknown { color: var(--dim); }
+      .badge.level { font-weight: 600; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.2rem; margin-top: 2.5rem; }
+      section.card { border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
+    </style>
+  </body>
+</html>

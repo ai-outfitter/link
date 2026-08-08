@@ -1,0 +1,284 @@
+[
+  {
+    "file": "feature-request.yaml",
+    "raw": "# Reference agent workflow: assigned feature/bug-fix issue -> reviewed,\n# reviewer-assigned pull request.\n#\n# Status: specification preview. This file is validated against\n# spec/agent-workflow.v1.schema.json in CI. No runtime executes it yet; it\n# freezes the authored surface the workflow compiler will consume.\n#\n# Adopt by copying this file into your org catalog under the same id and\n# editing the data: the reviewer team, the backend enum, the trigger.\nkind: agent-workflow/v1\nname: feature-request\non:\n  issues:\n    types: [assigned]\n    assignee: outfitter-bot\npermissions:\n  contents: write\n  pull-requests: write\nworkspace: checkout\n\nrequires:\n  governance: sdlc-baseline\n  forge:\n    issue-templates: [feature, bug-fix]\n\noutput:\n  type: object\n  additionalProperties: false\n  required: [status, summary]\n  properties:\n    status:\n      enum: [ready-for-human-review, blocked-prerequisites, revision-requested]\n    summary:\n      type: string\n      minLength: 1\n    pull-request:\n      type: string\n      format: uri\n\nsteps:\n  - id: open-draft-pr\n    agent: sdlc-engineer\n    output:\n      type: object\n      additionalProperties: false\n      required: [url, branch]\n      properties:\n        url: {type: string, format: uri}\n        branch: {type: string, minLength: 1}\n\n  # The plan is a work-graph/v1 document: the issue node, the explorers'\n  # evidence nodes, and change nodes whose edit/create/test anchors are the\n  # implementer's worklist. The runtime posts it; the planner writes nothing.\n  - id: plan\n    agent: sdlc-planner\n    with:\n      issue: ${{ trigger.issue.url }}\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n    posts-to: ${{ steps.open-draft-pr.output.url }}\n    output: ../spec/work-graph.v1.schema.json\n\n  # Decision step: a script (or an LLM one-shot behind the same schema)\n  # prints JSON whose enum the next step's runs-on reads. Routing decisions\n  # are recorded like any other step output, so they can be evaluated later.\n  - id: select-implementer\n    run: ./bin/rank-implementers\n    output:\n      type: object\n      additionalProperties: false\n      required: [backend, reason]\n      properties:\n        backend: {enum: [local, copilot, kube-agent, actions]}\n        reason: {type: string}\n\n  - id: implement\n    agent: sdlc-engineer\n    with:\n      plan: ${{ steps.plan.output }}\n    runs-on: ${{ steps.select-implementer.output.backend }}\n\n  # The reviewer receives the plan graph and appends finding nodes with\n  # verifies/refutes edges to its change nodes; the runtime posts them.\n  - id: review\n    agent: sdlc-reviewer\n    with:\n      plan: ${{ steps.plan.output }}\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n    posts-to: ${{ steps.open-draft-pr.output.url }}\n    output: ./schemas/review-output.schema.json\n\n  - if: steps.review.output.decision == 'changes-requested'\n    emit:\n      status: revision-requested\n      summary: \"Review requested changes; findings are on the pull request.\"\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n\n  - id: undraft-and-assign\n    agent: sdlc-engineer\n    reviewers: [team:reviewers]\n    emit:\n      status: ready-for-human-review\n      summary: \"Change implemented, reviewed, and assigned for human review.\"\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n",
+    "doc": {
+      "kind": "agent-workflow/v1",
+      "name": "feature-request",
+      "on": {
+        "issues": {
+          "types": [
+            "assigned"
+          ],
+          "assignee": "outfitter-bot"
+        }
+      },
+      "steps": [
+        {
+          "id": "open-draft-pr",
+          "agent": "sdlc-engineer",
+          "output": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "branch"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "plan",
+          "agent": "sdlc-planner",
+          "with": {
+            "issue": "${{ trigger.issue.url }}",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          },
+          "posts-to": "${{ steps.open-draft-pr.output.url }}",
+          "output": "../spec/work-graph.v1.schema.json"
+        },
+        {
+          "id": "select-implementer",
+          "run": "./bin/rank-implementers",
+          "output": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "backend",
+              "reason"
+            ],
+            "properties": {
+              "backend": {
+                "enum": [
+                  "local",
+                  "copilot",
+                  "kube-agent",
+                  "actions"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "id": "implement",
+          "agent": "sdlc-engineer",
+          "with": {
+            "plan": "${{ steps.plan.output }}"
+          },
+          "runs-on": "${{ steps.select-implementer.output.backend }}"
+        },
+        {
+          "id": "review",
+          "agent": "sdlc-reviewer",
+          "with": {
+            "plan": "${{ steps.plan.output }}",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          },
+          "posts-to": "${{ steps.open-draft-pr.output.url }}",
+          "output": "./schemas/review-output.schema.json"
+        },
+        {
+          "if": "steps.review.output.decision == 'changes-requested'",
+          "emit": {
+            "status": "revision-requested",
+            "summary": "Review requested changes; findings are on the pull request.",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          }
+        },
+        {
+          "id": "undraft-and-assign",
+          "agent": "sdlc-engineer",
+          "emit": {
+            "status": "ready-for-human-review",
+            "summary": "Change implemented, reviewed, and assigned for human review.",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          },
+          "reviewers": [
+            "team:reviewers"
+          ]
+        }
+      ],
+      "permissions": {
+        "contents": "write",
+        "pull-requests": "write"
+      },
+      "workspace": "checkout",
+      "requires": {
+        "governance": "sdlc-baseline",
+        "forge": {
+          "issue-templates": [
+            "feature",
+            "bug-fix"
+          ]
+        }
+      },
+      "output": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "summary"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "ready-for-human-review",
+              "blocked-prerequisites",
+              "revision-requested"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pull-request": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  },
+  {
+    "file": "vulnerability-fix.yaml",
+    "raw": "# Reference agent workflow: vulnerability report -> assessed, patched,\n# reviewed pull request, or a recorded not-affected outcome.\n#\n# Status: specification preview. Validated against\n# spec/agent-workflow.v1.schema.json in CI; no runtime executes it yet.\nkind: agent-workflow/v1\nname: vulnerability-fix\non:\n  issues:\n    types: [labeled]\n    label: vulnerability\npermissions:\n  contents: write\n  pull-requests: write\nworkspace: checkout\n\nrequires:\n  governance: sdlc-baseline\n  forge:\n    issue-templates: [vulnerability]\n\noutput:\n  type: object\n  additionalProperties: false\n  required: [status, summary]\n  properties:\n    status:\n      enum: [ready-for-human-review, not-affected, revision-requested]\n    summary:\n      type: string\n      minLength: 1\n    pull-request:\n      type: string\n      format: uri\n\nsteps:\n  # The assessment carries its evidence and, when affected, the remediation\n  # plan as a work graph beside the routing decision. Routing steps share one\n  # convention: the enum `if:` routes on is named `decision`.\n  - id: assess\n    agent: sdlc-planner\n    with:\n      issue: ${{ trigger.issue.url }}\n    output: ./schemas/assessment-output.schema.json\n\n  - if: steps.assess.output.decision == 'not-affected'\n    emit:\n      status: not-affected\n      summary: ${{ steps.assess.output.summary }}\n\n  - id: open-draft-pr\n    agent: sdlc-engineer\n    output:\n      type: object\n      additionalProperties: false\n      required: [url, branch]\n      properties:\n        url: {type: string, format: uri}\n        branch: {type: string, minLength: 1}\n\n  - id: patch\n    agent: sdlc-engineer\n    with:\n      plan: ${{ steps.assess.output.graph }}\n\n  - id: review\n    agent: sdlc-reviewer\n    with:\n      plan: ${{ steps.assess.output.graph }}\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n    posts-to: ${{ steps.open-draft-pr.output.url }}\n    output: ./schemas/review-output.schema.json\n\n  - if: steps.review.output.decision == 'changes-requested'\n    emit:\n      status: revision-requested\n      summary: \"Review requested changes; findings are on the pull request.\"\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n\n  - id: undraft-and-assign\n    agent: sdlc-engineer\n    reviewers: [team:reviewers]\n    emit:\n      status: ready-for-human-review\n      summary: \"Vulnerability patched, reviewed, and assigned for human review.\"\n      pull-request: ${{ steps.open-draft-pr.output.url }}\n",
+    "doc": {
+      "kind": "agent-workflow/v1",
+      "name": "vulnerability-fix",
+      "on": {
+        "issues": {
+          "types": [
+            "labeled"
+          ],
+          "label": "vulnerability"
+        }
+      },
+      "steps": [
+        {
+          "id": "assess",
+          "agent": "sdlc-planner",
+          "with": {
+            "issue": "${{ trigger.issue.url }}"
+          },
+          "output": "./schemas/assessment-output.schema.json"
+        },
+        {
+          "if": "steps.assess.output.decision == 'not-affected'",
+          "emit": {
+            "status": "not-affected",
+            "summary": "${{ steps.assess.output.summary }}"
+          }
+        },
+        {
+          "id": "open-draft-pr",
+          "agent": "sdlc-engineer",
+          "output": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "branch"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "branch": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "patch",
+          "agent": "sdlc-engineer",
+          "with": {
+            "plan": "${{ steps.assess.output.graph }}"
+          }
+        },
+        {
+          "id": "review",
+          "agent": "sdlc-reviewer",
+          "with": {
+            "plan": "${{ steps.assess.output.graph }}",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          },
+          "posts-to": "${{ steps.open-draft-pr.output.url }}",
+          "output": "./schemas/review-output.schema.json"
+        },
+        {
+          "if": "steps.review.output.decision == 'changes-requested'",
+          "emit": {
+            "status": "revision-requested",
+            "summary": "Review requested changes; findings are on the pull request.",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          }
+        },
+        {
+          "id": "undraft-and-assign",
+          "agent": "sdlc-engineer",
+          "emit": {
+            "status": "ready-for-human-review",
+            "summary": "Vulnerability patched, reviewed, and assigned for human review.",
+            "pull-request": "${{ steps.open-draft-pr.output.url }}"
+          },
+          "reviewers": [
+            "team:reviewers"
+          ]
+        }
+      ],
+      "permissions": {
+        "contents": "write",
+        "pull-requests": "write"
+      },
+      "workspace": "checkout",
+      "requires": {
+        "governance": "sdlc-baseline",
+        "forge": {
+          "issue-templates": [
+            "vulnerability"
+          ]
+        }
+      },
+      "output": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "summary"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "ready-for-human-review",
+              "not-affected",
+              "revision-requested"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pull-request": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  }
+]

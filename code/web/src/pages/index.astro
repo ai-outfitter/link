@@ -1,0 +1,89 @@
+---
+import Base from "../layouts/Base.astro";
+import report from "../data/report.json";
+
+const yes = "✓";
+const no = "—";
+---
+
+<Base title="SDLC report">
+  <h1>Organization SDLC report</h1>
+  <p class="dim">
+    Generated {report.generated_at} &middot; audited against governance baseline
+    <code>{report.baseline.name}</code> (enforcement: {report.baseline.enforcement})
+  </p>
+
+  {
+    report.orgs.map((org) => (
+      <section class="card">
+        <h2 style="margin-top:0">
+          {org.org}
+          <span class="badge level">level {org.org_level} &middot; {org.org_level_name}</span>
+        </h2>
+        <p class="dim">
+          {org.repos.length} repos scanned ({org.sampling_note}) at {org.scanned_at}
+        </p>
+
+        {org.gaps.length > 0 && (
+          <>
+            <strong>Gaps</strong>
+            <ul>
+              {org.gaps.map((gap) => (
+                <li>{gap}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <table>
+          <thead>
+            <tr>
+              <th>repo</th>
+              <th>level</th>
+              <th>AGENTS.md</th>
+              <th>.agents/</th>
+              <th>agent workflows</th>
+              <th>baseline</th>
+            </tr>
+          </thead>
+          <tbody>
+            {org.repos.map((repo) => (
+              <tr>
+                <td>
+                  <code>{repo.name}</code>{" "}
+                  {repo.visibility === "private" && <span class="dim">(private)</span>}
+                </td>
+                <td>
+                  <span class="badge level">
+                    {repo.level} {repo.level_name}
+                  </span>
+                </td>
+                <td>{repo.signals.agents_md || repo.signals.claude_md ? yes : no}</td>
+                <td>{repo.signals.dotagents_tree ? yes : no}</td>
+                <td>
+                  {repo.signals.agent_workflows.length > 0 ? (
+                    <code>{repo.signals.agent_workflows.join(", ")}</code>
+                  ) : (
+                    no
+                  )}
+                </td>
+                <td>
+                  {repo.baseline.map((check) => (
+                    <span class="badge" class:list={[check.status]} title={check.note}>
+                      {check.rule}: {check.status}
+                    </span>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    ))
+  }
+
+  <h2>Evidence limits</h2>
+  <ul class="dim">
+    {report.evidence_limits.map((limit) => <li>{limit}</li>)}
+  </ul>
+</Base>
