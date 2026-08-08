@@ -13,8 +13,9 @@ import report from "../data/report.json";
 
   {
     report.orgs.map((org) => {
-      const active = org.repos.filter((repo) => repo.active);
-      const inactive = org.repos.filter((repo) => !repo.active);
+      const ranked = org.repos.filter((repo) => repo.active && repo.role !== "meta");
+      const unranked = org.repos.filter((repo) => !repo.active || repo.role === "meta");
+      const statusGlyph = { met: "✓", unmet: "✗", unknown: "?" };
       return (
         <section class="card">
           <h2 style="margin-top:0">
@@ -27,6 +28,16 @@ import report from "../data/report.json";
             {org.ranking_note}
           </p>
 
+          <ul class="milestones">
+            {org.milestones.map((m) => (
+              <li class:list={[m.status]}>
+                <span class="glyph">{statusGlyph[m.status]}</span>
+                <span class="mtitle">{m.title}</span>
+                <span class="dim">{m.evidence}</span>
+              </li>
+            ))}
+          </ul>
+
           {org.gaps.length > 0 && (
             <>
               <strong>Gaps</strong>
@@ -38,15 +49,15 @@ import report from "../data/report.json";
             </>
           )}
 
-          <RepoTable repos={active} />
+          <RepoTable repos={ranked} />
 
-          {inactive.length > 0 && (
+          {unranked.length > 0 && (
             <details class="inactive">
               <summary>
-                {inactive.length} inactive {inactive.length === 1 ? "repo" : "repos"} (no push in 7
-                days) — hidden, not ranked
+                {unranked.length} unranked {unranked.length === 1 ? "repo" : "repos"} (inactive
+                &gt;7 days, or meta) — hidden
               </summary>
-              <RepoTable repos={inactive} />
+              <RepoTable repos={unranked} />
             </details>
           )}
         </section>
@@ -61,6 +72,24 @@ import report from "../data/report.json";
 </Base>
 
 <style>
+  .milestones { list-style: none; margin: 0.75rem 0 1.25rem; padding: 0; }
+  .milestones li {
+    display: grid;
+    grid-template-columns: 1.2rem 15rem 1fr;
+    gap: 0 0.75rem;
+    padding: 0.28rem 0;
+    border-top: 1px solid var(--hairline);
+    font-size: 0.82rem;
+  }
+  .milestones .glyph { text-align: center; }
+  .milestones li.met .glyph { color: var(--terminal); }
+  .milestones li.unmet .glyph { color: #d0685f; }
+  .milestones li.unknown .glyph { color: var(--faint); }
+  .milestones .mtitle { font-weight: 500; }
+  @media (max-width: 720px) {
+    .milestones li { grid-template-columns: 1.2rem 1fr; }
+    .milestones .dim { grid-column: 2; }
+  }
   details.inactive { margin-top: 1rem; }
   details.inactive summary {
     font-size: 0.75rem;

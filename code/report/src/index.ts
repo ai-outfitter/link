@@ -8,6 +8,7 @@ import { join } from "node:path";
 import {
   BaselineCheck,
   LEVEL_NAMES,
+  Milestone,
   OrgReport,
   Report,
   RepoReport,
@@ -41,6 +42,11 @@ type RepoListing = {
 };
 
 const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot|review-bot/i;
+// Build/publish/setup workflows that merely mention agents are not agent
+// workflows: publish-agent-image builds an image, copilot-setup-steps
+// configures an environment.
+const AGENT_WORKFLOW_EXCLUDE = /setup|publish|deploy|build|image|release/i;
+const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|nix|sh|bash|sql|proto|astro|vue|svelte)$/;
 
 async function ghJson<T>(args: string[]): Promise<T | null> {
   const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "ignore" });
@@ -77,13 +83,24 @@ function classifySignals(paths: string[]): Signals {
     dotagents_tree: paths.some((p) => p.startsWith(".agents/")),
     ci_workflows: ciWorkflows.length,
     agent_workflows: ciWorkflows
-      .filter((p) => AGENT_WORKFLOW_HINT.test(p))
+      .filter((p) => AGENT_WORKFLOW_HINT.test(p) && !AGENT_WORKFLOW_EXCLUDE.test(p))
       .map((p) => p.replace(".github/workflows/", "")),
     catalog,
     declared_workflows: declaredWorkflows,
     governance: paths.some((p) => /^governance\/.+\.ya?ml$/.test(p)),
+    copilot_agent: ciWorkflows.some((p) => p.includes("copilot-setup-steps")),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
   });
+}
+
+function classifyRole(name: string, paths: string[], signals: Signals): "catalog" | "application" | "meta" {
+  if (signals.catalog) return "catalog";
+  // Meta repos (org config, docs-only) are listed but never ranked: they
+  // will never need agent workflows, and counting them against the org
+  // punishes having utility repos.
+  if (name === ".github") return "meta";
+  if (!paths.some((p) => CODE_FILE.test(p)) && signals.ci_workflows === 0) return "meta";
+  return "application";
 }
 
 function auditBaseline(
@@ -111,24 +128,17 @@ function auditBaseline(
     });
   }
 
-  checks.push({
-    rule: "agent-identities",
-    status: "unknown",
-    note: "bot capability caps are org-level configuration, not visible in a repo scan",
-  });
-  checks.push({
-    rule: "teams.reviewers",
-    status: "unknown",
-    note: "team membership requires org admin read; not queried",
-  });
-  checks.push({
-    rule: "evidence.landing-gate",
-    status: signals.agent_workflows.length > 0 ? "fail" : "unknown",
-    note:
-      signals.agent_workflows.length > 0
-        ? "agent workflows present but no session-capture landing gate found"
-        : "no agent workflows found, gate not applicable yet",
-  });
+  // The landing gate applies only to workflows that land changes; triage
+  // never merges code. agent-identities and teams.reviewers are org-level
+  // facts and are reported once per org, not per repo.
+  const changeLanding = signals.agent_workflows.filter((w) => !/triage/i.test(w));
+  if (changeLanding.length > 0 || signals.copilot_agent) {
+    checks.push({
+      rule: "evidence.landing-gate",
+      status: "fail",
+      note: "change-landing agent automation present but no session-capture landing gate found",
+    });
+  }
   return checks;
 }
 
@@ -141,6 +151,110 @@ function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
   if (signals.catalog || signals.agent_workflows.length > 0 || signals.dotagents_tree) return 2;
   if (signals.agents_md || signals.claude_md) return 1;
   return 0;
+}
+
+const LEVEL_REQUIREMENTS: Record<number, string[]> = {
+  1: ["instructions"],
+  2: ["shared-catalog", "catalog-consumed"],
+  3: ["triggered-agents", "protected-landing", "session-capture"],
+  4: ["bot-identity", "strict-governance"],
+};
+
+function orgMilestones(ranked: RepoReport[]): Milestone[] {
+  const names = (repos: RepoReport[]) => repos.map((r) => r.name).join(", ");
+  const instr = ranked.filter((r) => r.signals.agents_md || r.signals.claude_md);
+  const catalogs = ranked.filter(
+    (r) => r.signals.catalog && r.signals.declared_workflows.length > 0 && r.signals.governance,
+  );
+  const consumers = ranked.filter(
+    (r) => r.role === "application" && r.signals.dotagents_tree,
+  );
+  const triggered = ranked.filter(
+    (r) => r.signals.agent_workflows.length > 0 || r.signals.copilot_agent,
+  );
+  const changeLanding = ranked.filter(
+    (r) =>
+      r.signals.agent_workflows.some((w) => !/triage/i.test(w)) || r.signals.copilot_agent,
+  );
+  const unprotectedLanding = changeLanding.filter(
+    (r) => !r.baseline.some((c) => c.rule === "branch-protection" && c.status === "pass"),
+  );
+  const enforcement = String(baselineDoc.enforcement ?? "warn");
+
+  return [
+    {
+      id: "instructions",
+      title: "agent instruction files",
+      status: instr.length > 0 ? "met" : "unmet",
+      evidence:
+        instr.length > 0
+          ? `${instr.length}/${ranked.length} ranked repos carry AGENTS.md or CLAUDE.md`
+          : "no ranked repo carries AGENTS.md or CLAUDE.md",
+    },
+    {
+      id: "shared-catalog",
+      title: "governed shared catalog",
+      status: catalogs.length > 0 ? "met" : "unmet",
+      evidence:
+        catalogs.length > 0
+          ? `${names(catalogs)} carry validated workflows beside a governance policy`
+          : "no repo carries validated workflow definitions beside a governance policy",
+    },
+    {
+      id: "catalog-consumed",
+      title: "catalog consumed by application repos",
+      status: consumers.length > 0 ? "met" : "unmet",
+      evidence:
+        consumers.length > 0
+          ? `${consumers.length} application repos carry a dotagents payload (${names(consumers)})`
+          : "no application repo carries a dotagents payload; pinned-source consumption is not tree-visible",
+    },
+    {
+      id: "triggered-agents",
+      title: "triggered agent automation",
+      status: triggered.length > 0 ? "met" : "unmet",
+      evidence:
+        triggered.length > 0
+          ? triggered
+              .map(
+                (r) =>
+                  `${r.name}: ${[...r.signals.agent_workflows, ...(r.signals.copilot_agent ? ["copilot coding agent"] : [])].join(", ")}`,
+              )
+              .join("; ")
+          : "no CI-triggered agent workflow or forge coding agent found",
+    },
+    {
+      id: "protected-landing",
+      title: "protection where agents land changes",
+      status:
+        changeLanding.length === 0 ? "unmet" : unprotectedLanding.length === 0 ? "met" : "unmet",
+      evidence:
+        changeLanding.length === 0
+          ? "no change-landing agent automation exists yet (triage does not land code)"
+          : unprotectedLanding.length === 0
+            ? `all ${changeLanding.length} change-landing repos pass branch protection`
+            : `unprotected: ${names(unprotectedLanding)}`,
+    },
+    {
+      id: "session-capture",
+      title: "session capture before landing",
+      status: "unmet",
+      evidence:
+        "no session-capture landing gate detected; becomes scannable once workflows upload session artifacts behind a required check",
+    },
+    {
+      id: "bot-identity",
+      title: "capped agent identity (bot app)",
+      status: "unknown",
+      evidence: "org-level GitHub App configuration is not scanned; verify and record manually",
+    },
+    {
+      id: "strict-governance",
+      title: "governance enforcement at strict",
+      status: enforcement === "strict" ? "met" : "unmet",
+      evidence: `sdlc-baseline enforcement: ${enforcement}`,
+    },
+  ].map((m) => Milestone.parse(m));
 }
 
 async function scanRepo(
@@ -168,6 +282,7 @@ async function scanRepo(
     default_branch: branch,
     pushed_at: listing.pushedAt,
     active: Date.parse(listing.pushedAt) >= activeCutoff,
+    role: classifyRole(listing.name, paths, signals),
     signals,
     baseline,
     level,
@@ -206,39 +321,32 @@ async function scanOrg(org: string): Promise<OrgReport> {
     await mapLimit(sorted, CONCURRENCY, (l) => scanRepo(org, l, activeCutoff))
   ).filter((r): r is RepoReport => r !== null);
 
-  // Ranking and gaps consider only active repos: a shelved repo's missing
-  // branch protection is not the org's current practice.
-  const ranked = repos.filter((r) => r.active);
+  // Ranking considers only active, non-meta repos: a shelved repo's missing
+  // branch protection is not current practice, and org-config or docs-only
+  // repos will never need agent workflows.
+  const ranked = repos.filter((r) => r.active && r.role !== "meta");
 
-  // The org level is what it can claim consistently: the highest level at
-  // least half of the ranked repositories reach.
-  const orgLevel =
-    [5, 4, 3, 2, 1].find(
-      (lvl) => ranked.length > 0 && ranked.filter((r) => r.level >= lvl).length * 2 >= ranked.length,
-    ) ?? 0;
+  // The org level is a cumulative capability checklist with evidence, not a
+  // repo count — repo counts can be bought with copy-paste workflows.
+  const milestones = orgMilestones(ranked);
+  const met = (id: string) => milestones.find((m) => m.id === id)?.status === "met";
+  let orgLevel = 0;
+  for (const [level, ids] of Object.entries(LEVEL_REQUIREMENTS)) {
+    if (orgLevel === Number(level) - 1 && ids.every(met)) orgLevel = Number(level);
+  }
 
+  // Gaps are what blocks the next level, plus the protection backlog.
   const gaps: string[] = [];
+  for (const id of LEVEL_REQUIREMENTS[orgLevel + 1] ?? []) {
+    const m = milestones.find((x) => x.id === id)!;
+    if (m.status !== "met") gaps.push(`level ${orgLevel + 1} blocked — ${m.title}: ${m.evidence}`);
+  }
   const failing = ranked.filter((r) =>
     r.baseline.some((c) => c.rule === "branch-protection" && c.status === "fail"),
   );
   if (failing.length > 0)
     gaps.push(
-      `${failing.length}/${ranked.length} active repos miss baseline branch protection (required checks + reviews)`,
-    );
-  const noInstructions = ranked.filter((r) => !r.signals.agents_md && !r.signals.claude_md);
-  if (noInstructions.length > 0)
-    gaps.push(`${noInstructions.length}/${ranked.length} active repos have no AGENTS.md or CLAUDE.md`);
-  const governedCatalog = ranked.some(
-    (r) => r.signals.catalog && r.signals.declared_workflows.length > 0 && r.signals.governance,
-  );
-  if (!governedCatalog)
-    gaps.push(
-      "no governed catalog found: no active repo carries validated workflow definitions beside a governance policy",
-    );
-  const withAgents = ranked.filter((r) => r.signals.agent_workflows.length > 0);
-  if (withAgents.length > 0)
-    gaps.push(
-      `no session-capture landing gate found on any of the ${withAgents.length} repos running agent workflows`,
+      `${failing.length}/${ranked.length} ranked repos miss baseline branch protection (required checks + reviews)`,
     );
 
   return OrgReport.parse({
@@ -248,7 +356,8 @@ async function scanOrg(org: string): Promise<OrgReport> {
       listings.length >= REPO_LIMIT
         ? `most recently pushed ${REPO_LIMIT} repositories`
         : `all ${listings.length} repositories`,
-    ranking_note: `ranking covers the ${ranked.length} repos pushed within ${ACTIVE_WINDOW_DAYS} days; ${repos.length - ranked.length} inactive repos are listed but not ranked`,
+    ranking_note: `ranking covers the ${ranked.length} active catalog/application repos; ${repos.length - ranked.length} inactive or meta repos are listed but not ranked`,
+    milestones,
     repos,
     org_level: orgLevel,
     org_level_name: LEVEL_NAMES[orgLevel],

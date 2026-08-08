@@ -20,7 +20,19 @@ export const Signals = z.object({
   catalog: z.boolean(),
   declared_workflows: z.array(z.string()),
   governance: z.boolean(),
+  // copilot-setup-steps.yml is not an agent workflow itself, but it is
+  // evidence the forge's coding agent is enabled for this repo.
+  copilot_agent: z.boolean(),
   docs: z.enum(["none", "thin", "adequate"]),
+});
+
+export const Role = z.enum(["catalog", "application", "meta"]);
+
+export const Milestone = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: z.enum(["met", "unmet", "unknown"]),
+  evidence: z.string(),
 });
 
 export const BaselineCheck = z.object({
@@ -35,6 +47,7 @@ export const RepoReport = z.object({
   default_branch: z.string(),
   pushed_at: z.string(),
   active: z.boolean(),
+  role: Role,
   signals: Signals,
   baseline: z.array(BaselineCheck),
   level: z.number().int().min(0).max(5),
@@ -47,6 +60,7 @@ export const OrgReport = z.object({
   sampling_note: z.string(),
   ranking_note: z.string(),
   repos: z.array(RepoReport),
+  milestones: z.array(Milestone),
   org_level: z.number().int().min(0).max(5),
   org_level_name: z.enum(LEVEL_NAMES),
   gaps: z.array(z.string()),
@@ -63,6 +77,8 @@ export const Report = z.object({
 });
 
 export type Report = z.infer<typeof Report>;
+export type Milestone = z.infer<typeof Milestone>;
+export type Role = z.infer<typeof Role>;
 export type OrgReport = z.infer<typeof OrgReport>;
 export type RepoReport = z.infer<typeof RepoReport>;
 export type Signals = z.infer<typeof Signals>;
