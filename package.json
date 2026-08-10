@@ -1,6 +1,6 @@
 {
   "name": "@ai-outfitter/link",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Audit organizations against the Outfitter SDLC governance baseline: a read-only scanner that rates repositories on the agentic adoption ramp.",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/ai-outfitter/link/compare/v1.0.1...v1.0.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* **release:** pin node 24 so npm can use trusted publishing ([#6](https://github.com/ai-outfitter/link/issues/6)) ([afdeee5](https://github.com/ai-outfitter/link/commit/afdeee5dd995c4b215e0276d70d3a1e5ea0bbd33))
+
 ## [1.0.1](https://github.com/ai-outfitter/link/compare/v1.0.0...v1.0.1) (2026-08-10)
 
 
