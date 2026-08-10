@@ -15,7 +15,8 @@ repositories, reads git trees, and reads effective branch rules; it changes
 nothing.
 
 ```sh
-npx @ai-outfitter/link review <org>     # scan, then serve it at :4321
+npx @ai-outfitter/link review <org>        # a whole organization
+npx @ai-outfitter/link review <org>/<repo> # one repository
 ```
 
 `review` is the one to reach for: it scans and then opens the report, which
@@ -81,11 +82,22 @@ least once first: the page renders whatever the last scan wrote.
 
 ## The report
 
-Sources can be GitHub orgs or **local folders** — a single checkout, an
-owner folder of clones, or a whole `~/repos/` root; hidden directories are
-included because the org/user `.agents` catalog is the canonical eval
-anchor. `link report add <org-or-path>` registers a source persistently in
+Sources can be a GitHub org (`acme`), a single repository (`acme/widgets`),
+or a **local folder** — a single checkout, an owner folder of clones, or a
+whole `~/repos/` root; hidden directories are included because the org/user
+`.agents` catalog is the canonical eval anchor. `link report add
+<org-or-path>` registers a source persistently in
 `$XDG_CONFIG_HOME/outfitter-link/sources.json`.
+
+Repositories group by owner, so `link report acme/one acme/two` is one
+report covering two repositories rather than two reports. Naming an org and
+one of its repositories is not a duplicate — the org listing already carries
+it.
+
+A repository-scoped scan never lists the rest of the owner, so its level
+describes the repositories it saw and not the organization. The report says
+exactly that in `evidence_limits`, and its `source_type` is `github-repo`
+rather than `github-org`.
 
 Named targets scope the scan to themselves: `link report acme` reports on
 acme and nothing else, because that report gets filed into acme's own

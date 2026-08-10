@@ -74,12 +74,24 @@ async function web(): Promise<number> {
   return 2;
 }
 
+// A scan that cannot proceed — an unreadable repository, an org the token
+// cannot list — is the user's problem to fix, not a bug in this tool. Print
+// what went wrong; a stack trace here only buries it.
+async function report(args: string[]): Promise<number> {
+  try {
+    return await runReport(args);
+  } catch (error: any) {
+    console.error(error?.message ?? String(error));
+    return 1;
+  }
+}
+
 const argv = process.argv.slice(2);
 const command = argv[0];
 
 let code: number;
 if (command === "report") {
-  code = await runReport(argv.slice(1));
+  code = await report(argv.slice(1));
 } else if (command === "web") {
   code = await web();
 } else if (command === "review") {
@@ -87,7 +99,7 @@ if (command === "report") {
   // not to look at it, which is why this is the container's default. A
   // failed scan stops here: serving the previous report under a fresh org's
   // name is worse than saying the scan failed.
-  code = await runReport(argv.slice(1));
+  code = await report(argv.slice(1));
   if (code === 0) code = await web();
 } else if (command === "help" || command === "--help" || command === "-h" || !command) {
   console.log(USAGE);

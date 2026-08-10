@@ -68,7 +68,12 @@ const CONCURRENCY = 8;
 // but excluded from the org-level ranking and the gap counts.
 const ACTIVE_WINDOW_DAYS = 7;
 
-type Source = { type: "github-org" | "folder"; target: string };
+type Source = { type: "github-org" | "github-repo" | "folder"; target: string };
+
+// `owner/repo` names one repository; a bare `owner` means the whole org. A
+// path that exists on disk always wins, so a folder called `acme/link` under
+// the working directory is still a folder source.
+const OWNER_REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 const baselineDoc = parseYaml(
   readFileSync(join(ROOT, "governance", "sdlc-baseline.yaml"), "utf8"),
@@ -93,8 +98,9 @@ async function saveSources(sources: Source[]) {
 
 function toSource(target: string): Source {
   const expanded = target.startsWith("~") ? join(homedir(), target.slice(1)) : target;
-  return existsSync(expanded)
-    ? { type: "folder", target: resolve(expanded) }
+  if (existsSync(expanded)) return { type: "folder", target: resolve(expanded) };
+  return OWNER_REPO.test(target)
+    ? { type: "github-repo", target }
     : { type: "github-org", target };
 }
 
@@ -534,7 +540,12 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
 type ScanUnit = {
   label: string;
   identity: string | null;
+  // The whole organization, listed from the forge.
   org: string | null;
+  // Named repositories in that owner, when the caller asked for repositories
+  // rather than an org. Both may be set: `report acme acme/other-repo` lists
+  // acme and adds a repository the sample might otherwise have missed.
+  repos: string[];
   folders: { root: string; dirs: string[] }[];
 };
 
@@ -553,8 +564,20 @@ async function buildUnits(sources: Source[]): Promise<ScanUnit[]> {
       label: s.target,
       identity: `github.com/${s.target.toLowerCase()}`,
       org: s.target,
+      repos: [],
       folders: [],
     }));
+
+  // Repositories join the unit for their owner, so `acme/one acme/two` is one
+  // report about acme rather than two reports about one repository each.
+  for (const source of sources.filter((s) => s.type === "github-repo")) {
+    const owner = source.target.slice(0, source.target.indexOf("/"));
+    const identity = `github.com/${owner.toLowerCase()}`;
+    const existing = units.find((u) => u.identity === identity);
+    if (existing) existing.repos.push(source.target);
+    else units.push({ label: owner, identity, org: null, repos: [source.target], folders: [] });
+  }
+
   for (const source of sources.filter((s) => s.type === "folder")) {
     const dirs = listRepoDirs(source.target);
     const ids = await mapLimit(dirs, CONCURRENCY, repoIdentity);
@@ -569,10 +592,23 @@ async function buildUnits(sources: Source[]): Promise<ScanUnit[]> {
         label: identity ?? source.target,
         identity,
         org: null,
+        repos: [],
         folders: [{ root: source.target, dirs }],
       });
   }
   return units;
+}
+
+// What the report says it looked at. A unit can mix all three, and the
+// combination matters to a reader: "github-repo" alone means the org's other
+// repositories were never examined, so an org level derived from it is a
+// statement about those repositories only.
+function sourceType(unit: ScanUnit): string {
+  const parts: string[] = [];
+  if (unit.org !== null) parts.push("github-org");
+  if (unit.repos.length > 0) parts.push("github-repo");
+  if (unit.folders.length > 0) parts.push("folder");
+  return parts.join("+") || "folder";
 }
 
 async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
@@ -580,8 +616,11 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
   const inputs: (RepoInput | null)[] = [];
   const notes: string[] = [];
 
+  const owner = unit.org ?? (unit.repos[0]?.split("/")[0] || null);
+  const listings: RepoListing[] = [];
+
   if (unit.org !== null) {
-    const listings = await ghJson<RepoListing[]>([
+    const listed = await ghJson<RepoListing[]>([
       "repo",
       "list",
       unit.org,
@@ -590,14 +629,49 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
       "--limit",
       String(REPO_LIMIT),
     ]);
-    if (listings === null) throw new Error(`cannot list repositories for ${unit.org}`);
-    const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
-    inputs.push(...(await mapLimit(sorted, CONCURRENCY, (l) => scanGithubRepo(unit.org!, l))));
+    if (listed === null) throw new Error(`cannot list repositories for ${unit.org}`);
+    listings.push(...listed);
     notes.push(
-      listings.length >= REPO_LIMIT
+      listed.length >= REPO_LIMIT
         ? `most recently pushed ${REPO_LIMIT} repositories`
-        : `all ${listings.length} repositories`,
+        : `all ${listed.length} repositories`,
     );
+  }
+
+  // Named repositories are fetched one at a time: `gh repo list` cannot
+  // address a single repository, and an unreadable one must not fail a scan
+  // that also covers repositories the token can read.
+  if (unit.repos.length > 0) {
+    const named = await mapLimit(unit.repos, CONCURRENCY, async (full) => {
+      const view = await ghJson<RepoListing>([
+        "repo",
+        "view",
+        full,
+        "--json",
+        "name,visibility,defaultBranchRef,pushedAt",
+      ]);
+      if (view === null) notes.push(`${full} could not be read`);
+      return view;
+    });
+    const found = named.filter((r): r is RepoListing => r !== null);
+    if (found.length === 0 && unit.org === null && unit.folders.length === 0)
+      throw new Error(
+        `cannot read ${unit.repos.join(", ")} — check the name and that the token can see it`,
+      );
+    // A repository named explicitly and also present in the org listing is
+    // one repository; the listing already carries it.
+    const already = new Set(listings.map((l) => l.name.toLowerCase()));
+    listings.push(...found.filter((r) => !already.has(r.name.toLowerCase())));
+    notes.push(
+      found.length === 1
+        ? `repository ${found[0].name}`
+        : `${found.length} named repositories`,
+    );
+  }
+
+  if (listings.length > 0 && owner) {
+    const sorted = [...listings].sort((a, b) => b.pushedAt.localeCompare(a.pushedAt));
+    inputs.push(...(await mapLimit(sorted, CONCURRENCY, (l) => scanGithubRepo(owner, l))));
   }
 
   // Local checkouts of repos the forge scan already covered are the same
@@ -657,12 +731,7 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
 
   return OrgReport.parse({
     org: unit.label,
-    source_type:
-      unit.org !== null && unit.folders.length > 0
-        ? "github-org+folder"
-        : unit.org !== null
-          ? "github-org"
-          : "folder",
+    source_type: sourceType(unit),
     identity: unit.identity,
     scanned_at: new Date().toISOString(),
     sampling_note: samplingNote,
@@ -739,17 +808,31 @@ export async function runReport(argv: string[]): Promise<number> {
     return 2;
   }
 
+  const orgs = await mapLimit(await buildUnits(sources), 2, scanUnit);
+
+  const evidenceLimits = [
+    "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
+    "absence of evidence is recorded as absence, not as a negative fact",
+    `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
+    "org-level settings (bot capability caps, team membership) were not queried",
+    "local checkouts report forge branch rules as unknown",
+  ];
+  // A scan of named repositories never listed the owner, so its level is a
+  // statement about those repositories. Saying so here is the difference
+  // between a scoped answer and a wrong one.
+  const scoped = orgs.filter((o) => !o.source_type.includes("github-org"));
+  if (scoped.length > 0)
+    evidenceLimits.push(
+      `named repositories only for ${scoped
+        .map((o) => o.org)
+        .join(", ")}: the rest of the owner was not listed, so the level describes the repositories scanned, not the organization`,
+    );
+
   const report = Report.parse({
     generated_at: new Date().toISOString(),
     baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
-    orgs: await mapLimit(await buildUnits(sources), 2, scanUnit),
-    evidence_limits: [
-      "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
-      "absence of evidence is recorded as absence, not as a negative fact",
-      `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
-      "org-level settings (bot capability caps, team membership) were not queried",
-      "local checkouts report forge branch rules as unknown",
-    ],
+    orgs,
+    evidence_limits: evidenceLimits,
   });
 
   const body = JSON.stringify(report, null, 2) + "\n";
