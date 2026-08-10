@@ -73,10 +73,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The major tag is what documentation pins to (ghcr.io/…/link:1), the
+      # image counterpart of `npx @ai-outfitter/link@1`. Without it every
+      # pinned pull in the docs 404s.
       - name: Push image
         run: |
           docker push "$IMAGE:$VERSION"
           if [ "${{ github.event.release.prerelease }}" != "true" ]; then
+            MAJOR="${VERSION%%.*}"
+            docker tag "$IMAGE:$VERSION" "$IMAGE:$MAJOR"
+            docker push "$IMAGE:$MAJOR"
             docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
             docker push "$IMAGE:latest"
           fi

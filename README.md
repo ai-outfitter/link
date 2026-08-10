@@ -44,7 +44,8 @@ The image carries `gh` and `git`, so it needs only a token. The working
 directory is `/work`; mount over it to keep the report:
 
 ```sh
-docker run --rm -e GH_TOKEN -v "$PWD:/work" ghcr.io/ai-outfitter/link report my-org
+docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" \
+  ghcr.io/ai-outfitter/link:1 report my-org
 ```
 
 ### The site
