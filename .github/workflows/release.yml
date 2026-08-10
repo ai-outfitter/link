@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # npm provenance (Sigstore-signed build attestation)
+
+jobs:
+  publish-npm:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          registry-url: https://registry.npmjs.org/
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # npm provenance requires a publicly verifiable source repository, so
+      # `--provenance` fails while this repo is private. Publish either way
+      # and say which happened: the sibling packages (outfitter, channels)
+      # publish with provenance from public repos, and this one joins them
+      # the moment the repo is made public.
+      - name: Publish package to npm
+        run: |
+          if [ "${{ github.event.repository.private }}" = "true" ]; then
+            echo "::warning::repository is private — publishing without provenance"
+            npm publish --access public
+          else
+            npm publish --access public --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-image:
+    name: Build, smoke test and push image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Resolve image name and version
+        run: |
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/link" >> "$GITHUB_ENV"
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+
+      - name: Build image
+        run: docker build -t "$IMAGE:$VERSION" .
+
+      # The scan needs a token, but the image must be useful without one:
+      # `link help` proves the entrypoint, node runtime, and catalog payload
+      # all resolve inside the image before anything is pushed.
+      - name: Smoke test image
+        run: |
+          docker run --rm "$IMAGE:$VERSION" help | grep -q "audit organizations"
+          docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c 'gh --version && git --version'
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The major tag is what documentation pins to (ghcr.io/…/link:1), the
+      # image counterpart of `npx @ai-outfitter/link@1`. Without it every
+      # pinned pull in the docs 404s.
+      - name: Push image
+        run: |
+          docker push "$IMAGE:$VERSION"
+          if [ "${{ github.event.release.prerelease }}" != "true" ]; then
+            MAJOR="${VERSION%%.*}"
+            docker tag "$IMAGE:$VERSION" "$IMAGE:$MAJOR"
+            docker push "$IMAGE:$MAJOR"
+            docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
+            docker push "$IMAGE:latest"
+          fi

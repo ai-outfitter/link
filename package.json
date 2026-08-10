@@ -1,0 +1,53 @@
+{
+  "name": "@ai-outfitter/link",
+  "version": "0.0.0",
+  "description": "Audit organizations against the Outfitter SDLC governance baseline: a read-only scanner that rates repositories on the agentic adoption ramp.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ai-outfitter/link.git"
+  },
+  "homepage": "https://github.com/ai-outfitter/link#readme",
+  "bugs": "https://github.com/ai-outfitter/link/issues",
+  "keywords": [
+    "ai-outfitter",
+    "sdlc",
+    "agents",
+    "governance",
+    "report"
+  ],
+  "bin": {
+    "link": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "agents",
+    "environments",
+    "governance",
+    "spec",
+    "workflows",
+    "docs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "report": "node dist/cli.js report"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
