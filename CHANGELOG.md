@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/ai-outfitter/link/compare/v1.0.0...v1.0.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **release:** authenticate to npm with trusted publishing, not a token ([#4](https://github.com/ai-outfitter/link/issues/4)) ([a9f59b1](https://github.com/ai-outfitter/link/commit/a9f59b10f4627a7f7b441904a29bebb912cc9173))
+
 ## 1.0.0 (2026-08-10)
 
 
