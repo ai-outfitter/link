@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/ai-outfitter/link/compare/v1.0.2...v1.1.0) (2026-08-10)
+
+
+### Features
+
+* **web:** ship the site prebuilt so `link web` works from the package ([#9](https://github.com/ai-outfitter/link/issues/9)) ([a4f4e34](https://github.com/ai-outfitter/link/commit/a4f4e34a899c6c08a2915c367e4626af181185b0))
+
 ## [1.0.2](https://github.com/ai-outfitter/link/compare/v1.0.1...v1.0.2) (2026-08-10)
 
 
