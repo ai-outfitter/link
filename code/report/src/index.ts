@@ -9,13 +9,19 @@
 // eval anchor — folder expansion therefore includes hidden directories.
 //
 // Usage:
-//   bun run src/index.ts                  # scan registered sources
-//   bun run src/index.ts add <target>...  # register org(s)/folder(s), then scan
-//   bun run src/index.ts <target>...      # scan registered + these (not saved)
+//   link report                  # scan registered sources
+//   link report add <target>...  # register org(s)/folder(s), then scan
+//   link report <target>...      # scan registered + these (not saved)
+//
+// Runs on plain node (so `npx @ai-outfitter/link` works) and on Bun, which
+// starts faster. Keep this file free of Bun-only globals.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { homedir } from "node:os";
-import { join, resolve, basename } from "node:path";
+import { join, resolve, basename, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseYaml } from "yaml";
 import {
   BaselineCheck,
   LEVEL_NAMES,
@@ -25,16 +31,33 @@ import {
   RepoReport,
   Signals,
   WorkflowsFile,
-} from "./schema.ts";
+} from "./schema.js";
 
-const ROOT = join(import.meta.dir, "..", "..", "..");
+// The catalog payload (governance, workflows) sits at the package root, but
+// this file runs from two depths: code/report/src in a checkout, dist/ in an
+// installed package. Walk up to the payload rather than counting directories.
+function findRoot(from: string): string {
+  let dir = from;
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(join(dir, "governance", "sdlc-baseline.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error(
+    "cannot locate the catalog payload: governance/sdlc-baseline.yaml is missing",
+  );
+}
+
+const ROOT = findRoot(dirname(fileURLToPath(import.meta.url)));
+// Present only in a repo checkout; the Astro dev site reads the report here.
 const DATA_DIR = join(ROOT, "code", "web", "src", "data");
 const XDG_CONFIG = join(
-  Bun.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
+  process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
   "outfitter-link",
 );
 const XDG_DATA = join(
-  Bun.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"),
+  process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"),
   "outfitter-link",
 );
 const SOURCES_FILE = join(XDG_CONFIG, "sources.json");
@@ -47,8 +70,8 @@ const ACTIVE_WINDOW_DAYS = 7;
 
 type Source = { type: "github-org" | "folder"; target: string };
 
-const baselineDoc = Bun.YAML.parse(
-  await Bun.file(join(ROOT, "governance", "sdlc-baseline.yaml")).text(),
+const baselineDoc = parseYaml(
+  readFileSync(join(ROOT, "governance", "sdlc-baseline.yaml"), "utf8"),
 ) as Record<string, any>;
 
 // ── source registry ─────────────────────────────────────────────────────────
@@ -65,7 +88,7 @@ function loadSources(): Source[] {
 
 async function saveSources(sources: Source[]) {
   mkdirSync(XDG_CONFIG, { recursive: true });
-  await Bun.write(SOURCES_FILE, JSON.stringify({ sources }, null, 2) + "\n");
+  await writeFile(SOURCES_FILE, JSON.stringify({ sources }, null, 2) + "\n");
 }
 
 function toSource(target: string): Source {
@@ -376,10 +399,22 @@ type RepoListing = {
   pushedAt: string;
 };
 
+// Resolves to null on a non-zero exit so a repo the token cannot read
+// degrades to "unknown" instead of failing the whole scan.
+function run(cmd: string, args: string[]): Promise<string | null> {
+  return new Promise((resolvePromise) => {
+    execFile(
+      cmd,
+      args,
+      { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" },
+      (error, stdout) => resolvePromise(error ? null : stdout),
+    );
+  });
+}
+
 async function ghJson<T>(args: string[]): Promise<T | null> {
-  const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "ignore" });
-  const out = await new Response(proc.stdout).text();
-  if ((await proc.exited) !== 0) return null;
+  const out = await run("gh", args);
+  if (out === null) return null;
   try {
     return JSON.parse(out) as T;
   } catch {
@@ -448,9 +483,8 @@ function listRepoDirs(root: string): string[] {
 }
 
 async function git(dir: string, args: string[]): Promise<string | null> {
-  const proc = Bun.spawn(["git", "-C", dir, ...args], { stdout: "pipe", stderr: "ignore" });
-  const out = await new Response(proc.stdout).text();
-  return (await proc.exited) === 0 ? out.trim() : null;
+  const out = await run("git", ["-C", dir, ...args]);
+  return out === null ? null : out.trim();
 }
 
 async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | null> {
@@ -646,66 +680,93 @@ async function collectWorkflows(): Promise<WorkflowsFile> {
   const files = (await readdir(dir)).filter((f) => /\.ya?ml$/.test(f)).sort();
   const out = [];
   for (const file of files) {
-    const raw = await Bun.file(join(dir, file)).text();
-    out.push({ file, raw, doc: Bun.YAML.parse(raw) });
+    const raw = readFileSync(join(dir, file), "utf8");
+    out.push({ file, raw, doc: parseYaml(raw) });
   }
   return WorkflowsFile.parse(out);
 }
 
 // ── main ────────────────────────────────────────────────────────────────────
 
-const argv = Bun.argv.slice(2);
-let registered = loadSources();
+export async function runReport(argv: string[]): Promise<number> {
+  let registered = loadSources();
 
-if (argv[0] === "add") {
-  const added = argv.slice(1).map(toSource);
-  if (added.length === 0) {
-    console.error("usage: bun run src/index.ts add <org-or-path>...");
-    process.exit(2);
+  if (argv[0] === "add") {
+    const added = argv.slice(1).map(toSource);
+    if (added.length === 0) {
+      console.error("usage: link report add <org-or-path>...");
+      return 2;
+    }
+    registered = dedupe([...registered, ...added]);
+    await saveSources(registered);
+    console.log(`registered: ${registered.map((s) => s.target).join(", ")}`);
+    argv = [];
   }
-  registered = dedupe([...registered, ...added]);
-  await saveSources(registered);
-  console.log(`registered: ${registered.map((s) => s.target).join(", ")}`);
+
+  // --out <dir> puts the report where the caller wants it — the org's
+  // .agents/reports/sdlc/<date>/ directory, for the onboarding runbook.
+  let outDir = process.cwd();
+  const targets: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--out" || argv[i] === "-o") {
+      const dir = argv[++i];
+      if (!dir) {
+        console.error("--out needs a directory");
+        return 2;
+      }
+      outDir = resolve(dir.startsWith("~") ? join(homedir(), dir.slice(1)) : dir);
+    } else {
+      targets.push(argv[i]);
+    }
+  }
+
+  const ephemeral = targets.map(toSource);
+  // The local ai-outfitter checkout folder is always part of the local
+  // development report; its .agents catalog is the default eval anchor.
+  const defaults: Source[] = existsSync(DEFAULT_FOLDER)
+    ? [{ type: "folder", target: DEFAULT_FOLDER }]
+    : [];
+  const sources = dedupe([...defaults, ...registered, ...ephemeral]);
+
+  if (sources.length === 0) {
+    console.error("no sources: pass a GitHub org or folder, or `add` one first");
+    return 2;
+  }
+
+  const report = Report.parse({
+    generated_at: new Date().toISOString(),
+    baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
+    orgs: await mapLimit(await buildUnits(sources), 2, scanUnit),
+    evidence_limits: [
+      "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
+      "absence of evidence is recorded as absence, not as a negative fact",
+      `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
+      "org-level settings (bot capability caps, team membership) were not queried",
+      "local checkouts report forge branch rules as unknown",
+    ],
+  });
+
+  const body = JSON.stringify(report, null, 2) + "\n";
+  mkdirSync(outDir, { recursive: true });
+  mkdirSync(XDG_DATA, { recursive: true });
+  await writeFile(join(outDir, "report.json"), body);
+  await writeFile(join(XDG_DATA, "report.json"), body);
+  // Only in a checkout: the Astro dev site reads from its own source tree.
+  // An installed package must never write inside node_modules.
+  if (existsSync(DATA_DIR)) {
+    await writeFile(join(DATA_DIR, "report.json"), body);
+    await writeFile(
+      join(DATA_DIR, "workflows.json"),
+      JSON.stringify(await collectWorkflows(), null, 2) + "\n",
+    );
+  }
+
+  for (const org of report.orgs) {
+    const smoke = org.milestones.find((m) => m.id === "e2e-smoketest");
+    console.log(
+      `${org.org} [${org.source_type}]: level ${org.org_level} (${org.org_level_name}), ${org.repos.length} repos, smoketest ${smoke?.status}`,
+    );
+  }
+  console.log(`wrote ${join(outDir, "report.json")} (+ ${join(XDG_DATA, "report.json")})`);
+  return 0;
 }
-
-const ephemeral = argv[0] === "add" ? [] : argv.map(toSource);
-// The local ai-outfitter checkout folder is always part of the local
-// development report; its .agents catalog is the default eval anchor.
-const defaults: Source[] = existsSync(DEFAULT_FOLDER)
-  ? [{ type: "folder", target: DEFAULT_FOLDER }]
-  : [];
-const sources = dedupe([...defaults, ...registered, ...ephemeral]);
-
-if (sources.length === 0) {
-  console.error("no sources: pass a GitHub org or folder, or `add` one first");
-  process.exit(2);
-}
-
-const report = Report.parse({
-  generated_at: new Date().toISOString(),
-  baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
-  orgs: await mapLimit(await buildUnits(sources), 2, scanUnit),
-  evidence_limits: [
-    "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
-    "absence of evidence is recorded as absence, not as a negative fact",
-    `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
-    "org-level settings (bot capability caps, team membership) were not queried",
-    "local checkouts report forge branch rules as unknown",
-  ],
-});
-
-mkdirSync(XDG_DATA, { recursive: true });
-await Bun.write(join(DATA_DIR, "report.json"), JSON.stringify(report, null, 2) + "\n");
-await Bun.write(join(XDG_DATA, "report.json"), JSON.stringify(report, null, 2) + "\n");
-await Bun.write(
-  join(DATA_DIR, "workflows.json"),
-  JSON.stringify(await collectWorkflows(), null, 2) + "\n",
-);
-
-for (const org of report.orgs) {
-  const smoke = org.milestones.find((m) => m.id === "e2e-smoketest");
-  console.log(
-    `${org.org} [${org.source_type}]: level ${org.org_level} (${org.org_level_name}), ${org.repos.length} repos, smoketest ${smoke?.status}`,
-  );
-}
-console.log(`wrote ${join(DATA_DIR, "report.json")} (+ ${join(XDG_DATA, "report.json")})`);

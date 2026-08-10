@@ -4,3 +4,5 @@ code/web/.astro/
 # Report data stays local (XDG + working tree): it names private repos
 # and private catalogs that must not land in this or any shared repo.
 code/web/src/data/report.json
+dist/
+*.tgz

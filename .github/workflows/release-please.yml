@@ -1,0 +1,24 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # The org blocks the default GITHUB_TOKEN from creating PRs, so
+          # release-please authenticates with the org RELEASE_PLEASE_TOKEN PAT
+          # (same convention as ai-outfitter/outfitter and /channels).
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
