@@ -18,16 +18,23 @@
 - Record absence of evidence as absence, never as a negative fact. A forge
   scan cannot see local-only practice; `evidence_limits` bounds every claim
   the report makes.
-- Node is the contract for `code/report/src` — see CONTRIBUTING.md. Bun is a
-  faster runtime for the edit loop, not a target.
+- Node is the contract, for the scanner and the web server alike — see
+  CONTRIBUTING.md. Bun is a faster runtime for the edit loop, not a target,
+  and nothing may spawn it: the published package does not require it.
+- There is one scanner entry point. The site's rescan spawns
+  `<root>/dist/cli.js` on `process.execPath`, never a second implementation
+  and never the TypeScript source, which the package does not ship.
 - Never write inside the installed package. Reports go to the working
   directory, `--out`, and `$XDG_DATA_HOME`; the `code/web/src/data` copy is
   written only when that directory already exists, which is true in a
-  checkout and false under `npx`.
-- The scanner resolves the catalog payload by walking up from its own
-  location to `governance/sdlc-baseline.yaml`, because it runs from
-  `code/report/src` in a checkout and `dist/` when installed. Do not
-  reintroduce a fixed relative depth.
+  checkout and false under `npx`. The site reads XDG first for the same
+  reason, and its rescan passes `--out $XDG_DATA_HOME` so it never litters
+  the directory the user launched `link web` from.
+- Both the scanner and the site resolve the catalog payload by walking up
+  from their own location to `governance/sdlc-baseline.yaml`, because they
+  run from `code/report/src` or `code/web/src/lib` in a checkout and from
+  `dist/` or `dist-web/server/` when installed. Do not reintroduce a fixed
+  relative depth in either.
 - `gh` failures resolve to `null` so one unreadable repository degrades to
   "unknown" instead of failing the scan. Preserve that; a partial report that
   says what it could not see beats no report.

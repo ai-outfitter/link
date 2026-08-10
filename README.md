@@ -54,13 +54,18 @@ docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" \
 
 ### The site
 
-`link web` serves the report at `http://localhost:4321` — `/` is the
-organization report, `/workflows` renders each `agent-workflow/v1`
+```sh
+npx @ai-outfitter/link@1 web        # http://localhost:4321; set PORT to change it
+```
+
+`/` is the organization report; `/workflows` renders each `agent-workflow/v1`
 definition with its steps, `with:` handoffs, `posts-to:` targets, and YAML
-source. The report page manages sources directly: add a GitHub org or a
-local folder in the form and rescan — the same XDG registry the CLI uses,
-served by API routes on the local server. The site is not part of the
-published package; `link web` needs a checkout of this repository.
+source. The report page manages sources directly: add a GitHub org or a local
+folder in the form and rescan — the same XDG registry the CLI uses, and the
+same scanner, run for you.
+
+The site ships prebuilt and needs no toolchain of its own. Run `report` at
+least once first: the page renders whatever the last scan wrote.
 
 ## The report
 

@@ -6,3 +6,6 @@ code/web/.astro/
 code/web/src/data/report.json
 dist/
 *.tgz
+dist-web/
+code/web/dist/
+.astro/

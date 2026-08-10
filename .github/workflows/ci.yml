@@ -39,6 +39,8 @@ jobs:
 
       # Install the tarball the way a consumer does, so a missing entry in
       # `files` (the catalog payload especially) fails here and not on npx.
+      # `npm pack` runs prepack, which builds the site, so this also proves
+      # the prebuilt site ships.
       - name: Pack and install as a consumer
         run: |
           npm pack
@@ -49,6 +51,22 @@ jobs:
           # The scanner resolves its governance baseline by walking up from
           # dist/; prove the payload shipped rather than assuming it did.
           test -f node_modules/@ai-outfitter/link/governance/sdlc-baseline.yaml
+          test -f node_modules/@ai-outfitter/link/dist-web/server/entry.mjs
+
+      # The site must serve with no node_modules of its own and no Astro at
+      # run time. A folder source scans through `git ls-files`, so this needs
+      # no forge token, and it seeds the XDG report the site reads.
+      - name: Serve the prebuilt site from the installed package
+        run: |
+          cd /tmp/consumer
+          ./node_modules/.bin/link report "$GITHUB_WORKSPACE"
+          PORT=4321 ./node_modules/.bin/link web &
+          for _ in $(seq 1 30); do
+            curl -fsS -o /dev/null http://localhost:4321/ 2>/dev/null && break || sleep 1
+          done
+          curl -fsS -o /dev/null -w 'GET / %{http_code}\n' http://localhost:4321/
+          curl -fsS -o /dev/null -w 'GET /workflows %{http_code}\n' http://localhost:4321/workflows
+          kill %1
 
   image:
     name: Build and smoke test image
