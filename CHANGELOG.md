@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/ai-outfitter/link/compare/v1.2.0...v1.3.0) (2026-08-10)
+
+
+### Features
+
+* **cli:** add `review` — scan then serve — and make it the container default ([#13](https://github.com/ai-outfitter/link/issues/13)) ([d78e40c](https://github.com/ai-outfitter/link/commit/d78e40c8f94e9b5bf489ad4bd68af23a42601bbc))
+
 ## [1.2.0](https://github.com/ai-outfitter/link/compare/v1.1.0...v1.2.0) (2026-08-10)
 
 
