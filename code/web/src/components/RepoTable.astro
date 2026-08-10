@@ -19,7 +19,11 @@ const no = "—";
     {repos.map((repo: any) => (
       <tr>
         <td>
-          <code>{repo.name}</code>{" "}
+          {repo.url ? (
+            <a href={repo.url} rel="noreferrer"><code>{repo.name}</code></a>
+          ) : (
+            <code>{repo.name}</code>
+          )}{" "}
           {repo.signals.catalog && <span class="badge">catalog</span>}{" "}
           {["private", "local"].includes(repo.visibility) && (
             <span class="dim">({repo.visibility})</span>

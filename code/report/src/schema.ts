@@ -58,6 +58,10 @@ export const BaselineCheck = z.object({
 
 export const RepoReport = z.object({
   name: z.string(),
+  // Forge URL, for repositories the scan listed from a forge. A local-only
+  // checkout has none: it was never seen on a forge, and a guessed URL that
+  // 404s is worse than no link.
+  url: z.string().nullable().default(null),
   visibility: z.string(),
   default_branch: z.string(),
   pushed_at: z.string(),
@@ -87,6 +91,11 @@ export const OrgReport = z.object({
   // Canonical identity resolved from git remotes (host/owner), used to
   // merge a local checkout folder with the forge org it clones.
   identity: z.string().nullable(),
+  // The org's dotagents catalog repository, when the scan found one. It is
+  // the canonical eval anchor, so the report points at it rather than
+  // leaving the reader to guess where the org keeps its agent definitions.
+  dotagents_repo: z.string().nullable().default(null),
+  dotagents_url: z.string().nullable().default(null),
   scanned_at: z.string(),
   sampling_note: z.string(),
   ranking_note: z.string(),

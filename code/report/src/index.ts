@@ -700,9 +700,24 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
   }
   const samplingNote = notes.join("; ");
 
+  // Only repositories the forge listed get a URL. A local-only checkout was
+  // never seen on a forge, so a URL built from the owner would be a guess.
+  const forgeListed = new Set(listings.map((l) => l.name.toLowerCase()));
   const repos = inputs
     .filter((r): r is RepoInput => r !== null)
-    .map((r) => buildRepoReport(r, activeCutoff));
+    .map((r) => {
+      const report = buildRepoReport(r, activeCutoff);
+      const url =
+        owner && forgeListed.has(basename(r.name).toLowerCase())
+          ? `https://github.com/${owner}/${basename(r.name)}`
+          : null;
+      return { ...report, url };
+    });
+
+  // The dotagents catalog, if the org keeps one. Searched across every
+  // repository rather than the ranked subset: `.agents` classifies as a meta
+  // repo and would be filtered out of the ranking before it could be found.
+  const dotagents = repos.find((r) => basename(r.name).toLowerCase() === ".agents") ?? null;
 
   // Ranking considers only active, non-meta repos: a shelved repo's missing
   // branch protection is not current practice, and org-config or docs-only
@@ -736,6 +751,8 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
     org: unit.label,
     source_type: sourceType(unit),
     identity: unit.identity,
+    dotagents_repo: dotagents?.name ?? null,
+    dotagents_url: dotagents?.url ?? null,
     scanned_at: new Date().toISOString(),
     sampling_note: samplingNote,
     ranking_note: `ranking covers the ${ranked.length} active catalog/application repos; ${repos.length - ranked.length} inactive or meta repos are listed but not ranked`,

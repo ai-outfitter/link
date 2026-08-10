@@ -76,6 +76,19 @@ const sources = loadSources();
             {org.repos.length} repos scanned ({org.sampling_note}) at {org.scanned_at}
             <br />
             {org.ranking_note}
+            {org.dotagents_repo && (
+              <>
+                <br />
+                catalog:{" "}
+                {org.dotagents_url ? (
+                  <a href={org.dotagents_url} rel="noreferrer">
+                    <code>{org.dotagents_repo}</code>
+                  </a>
+                ) : (
+                  <code>{org.dotagents_repo}</code>
+                )}
+              </>
+            )}
           </p>
 
           <ul class="milestones">
