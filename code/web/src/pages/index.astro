@@ -64,8 +64,12 @@ const sources = loadSources();
                 {
                   folder: "local folder",
                   "github-org": "github org",
+                  "github-repo": "named repos only",
+                  "github-org+github-repo": "github org + named repos",
                   "github-org+folder": "github org + local checkouts",
-                }[org.source_type]
+                  "github-repo+folder": "named repos + local checkouts",
+                  "github-org+github-repo+folder": "github org + named repos + local checkouts",
+                }[org.source_type] ?? org.source_type
               }
             </span>
             {org.identity && org.identity !== org.org && (
