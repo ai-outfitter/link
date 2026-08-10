@@ -72,4 +72,8 @@ EXPOSE 4321
 WORKDIR /work
 
 ENTRYPOINT ["link"]
-CMD ["help"]
+# Scan, then serve. Someone running this image wants to look at the result,
+# and splitting that across two `docker run` invocations against the same
+# mount is friction with no upside. `report` and `web` stay callable on
+# their own for automation that wants one or the other.
+CMD ["review"]

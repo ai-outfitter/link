@@ -15,13 +15,17 @@ repositories, reads git trees, and reads effective branch rules; it changes
 nothing.
 
 ```sh
-npx @ai-outfitter/link report <org> [org...]
+npx @ai-outfitter/link review <org>     # scan, then serve it at :4321
 ```
 
-`report` writes `report.json` to the working directory, plus a copy in
-`$XDG_DATA_HOME/outfitter-link/`. `--out <dir>` puts it somewhere else and
-creates the directory — how the onboarding runbook files a dated baseline
-into an org's `.agents` catalog:
+`review` is the one to reach for: it scans and then opens the report, which
+is what you wanted both times. `report` does the scan alone, for scripts and
+CI, and `web` serves the last one without rescanning.
+
+Either way the scan writes `report.json` to the working directory, plus a
+copy in `$XDG_DATA_HOME/outfitter-link/`. `--out <dir>` puts it somewhere
+else and creates the directory — how the onboarding runbook files a dated
+baseline into an org's `.agents` catalog:
 
 ```sh
 npx @ai-outfitter/link report my-org --out ~/repos/my-org/.agents/reports/sdlc/2026-08-10-initial
@@ -44,20 +48,21 @@ the [releases page](https://github.com/ai-outfitter/link/releases).
 
 ### Container
 
-The image carries `gh` and `git`, so it needs only a token — and it serves
-the report too, so the container is a complete path with no toolchain on the
-host. The working directory is `/work`; mount over it to keep the report.
+The image carries `gh` and `git`, so it needs only a token, and it serves the
+report too — the container is a complete path with no toolchain on the host.
+`review` is its default command, so one run scans and then serves:
 
 ```sh
-docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" \
-  ghcr.io/ai-outfitter/link:1 report my-org
-
-docker run --rm -v "$PWD:/work" -p 4321:4321 \
-  ghcr.io/ai-outfitter/link:1 web
+docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" -p 4321:4321 \
+  ghcr.io/ai-outfitter/link:1 review my-org
 ```
 
-Mount the same directory for both. A container's own state does not outlive
-it, so the copy on the mount is the one the second container reads.
+The working directory is `/work`; mount over it to keep the report, which
+lands there as `report.json` alongside `workflows.json`. A container's own
+state does not outlive it, so that mount is what a later `web` run reads.
+
+`report` and `web` remain callable on their own when automation wants one
+without the other.
 
 ### The site
 

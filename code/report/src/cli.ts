@@ -10,9 +10,10 @@ import { runReport } from "./index.js";
 const USAGE = `link — audit organizations against the Outfitter SDLC governance baseline
 
 Usage:
+  link review [<org-or-path>...] [--out <dir>]   scan, then serve the report
   link report [<org-or-path>...] [--out <dir>]   scan and write report.json
   link report add <org-or-path>...               register a source, then scan
-  link web                                       serve the report (needs a checkout)
+  link web                                       serve the last report
 
 The scan is read-only: it lists repositories, reads git trees, and reads
 effective branch rules. It changes nothing.
@@ -20,7 +21,7 @@ effective branch rules. It changes nothing.
 Requires an authenticated \`gh\` CLI on PATH. Sources are GitHub orgs or local
 folders; a bare \`link report\` scans every registered source.
 
-  link report ai-outfitter
+  link review ai-outfitter
   link report ai-outfitter --out ~/repos/ai-outfitter/.agents/reports/sdlc/2026-08-10-initial
 `;
 
@@ -81,11 +82,20 @@ if (command === "report") {
   code = await runReport(argv.slice(1));
 } else if (command === "web") {
   code = await web();
+} else if (command === "review") {
+  // Scan, then serve what was scanned. Nobody generates a report in order
+  // not to look at it, which is why this is the container's default. A
+  // failed scan stops here: serving the previous report under a fresh org's
+  // name is worse than saying the scan failed.
+  code = await runReport(argv.slice(1));
+  if (code === 0) code = await web();
 } else if (command === "help" || command === "--help" || command === "-h" || !command) {
   console.log(USAGE);
   code = command ? 0 : 2;
 } else {
-  console.error(`unknown command: ${command}\n\n${USAGE}`);
+  // A bare org name is the likeliest mistake, so name the command that does
+  // what they meant rather than only listing the ones that exist.
+  console.error(`unknown command: ${command}\n\nDid you mean:  link review ${command}\n\n${USAGE}`);
   code = 2;
 }
 process.exit(code);
