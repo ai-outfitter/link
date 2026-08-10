@@ -44,13 +44,20 @@ the [releases page](https://github.com/ai-outfitter/link/releases).
 
 ### Container
 
-The image carries `gh` and `git`, so it needs only a token. The working
-directory is `/work`; mount over it to keep the report:
+The image carries `gh` and `git`, so it needs only a token — and it serves
+the report too, so the container is a complete path with no toolchain on the
+host. The working directory is `/work`; mount over it to keep the report.
 
 ```sh
 docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" \
   ghcr.io/ai-outfitter/link:1 report my-org
+
+docker run --rm -v "$PWD:/work" -p 4321:4321 \
+  ghcr.io/ai-outfitter/link:1 web
 ```
+
+Mount the same directory for both. A container's own state does not outlive
+it, so the copy on the mount is the one the second container reads.
 
 ### The site
 

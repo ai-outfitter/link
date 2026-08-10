@@ -757,10 +757,12 @@ export async function runReport(argv: string[]): Promise<number> {
   mkdirSync(XDG_DATA, { recursive: true });
   await writeFile(join(outDir, "report.json"), body);
   await writeFile(join(XDG_DATA, "report.json"), body);
-  // `link web` renders /workflows from this, and reads it from XDG whether it
-  // runs from a checkout or from the published package, so it is written
-  // every run rather than only where a source tree exists.
+  // `link web` renders /workflows from this, so it goes everywhere the report
+  // goes. In a container the XDG copy dies with the container, and the
+  // mounted output directory is the only one that survives to the next
+  // `docker run … web`.
   const workflows = JSON.stringify(await collectWorkflows(), null, 2) + "\n";
+  await writeFile(join(outDir, "workflows.json"), workflows);
   await writeFile(join(XDG_DATA, "workflows.json"), workflows);
   // Only in a checkout: the Astro dev site also reads from its own source
   // tree. An installed package must never write inside node_modules.
