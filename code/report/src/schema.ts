@@ -99,9 +99,21 @@ export const OrgReport = z.object({
 
 export const Report = z.object({
   generated_at: z.string(),
+  // The policy travels with the report. A report filed into an org's
+  // `.agents` catalog is evidence, and evidence that cites a policy without
+  // carrying it cannot be re-read once the policy moves on.
   baseline: z.object({
     name: z.string(),
     enforcement: z.string(),
+    kind: z.string().default(""),
+    // The policy document as parsed, and its YAML source. The site renders
+    // both, so nobody has to open the package to read what was audited.
+    doc: z.record(z.string(), z.unknown()).default({}),
+    raw: z.string().default(""),
+    // The rules this scanner measures. Every other rule in the policy is
+    // stated but unmeasured, and the site says which is which — an
+    // unmeasured rule read as a passing one is a false clean bill.
+    audited_rules: z.array(z.string()).default([]),
   }),
   orgs: z.array(OrgReport),
   evidence_limits: z.array(z.string()),

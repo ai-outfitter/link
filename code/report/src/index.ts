@@ -73,9 +73,14 @@ type Source = { type: "github-org" | "github-repo" | "folder"; target: string };
 // the working directory is still a folder source.
 const OWNER_REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
-const baselineDoc = parseYaml(
-  readFileSync(join(ROOT, "governance", "sdlc-baseline.yaml"), "utf8"),
-) as Record<string, any>;
+const baselineRaw = readFileSync(join(ROOT, "governance", "sdlc-baseline.yaml"), "utf8");
+const baselineDoc = parseYaml(baselineRaw) as Record<string, any>;
+
+// The rules `auditBaseline` measures. Keep this in step with the checks it
+// pushes: the site marks every other rule in the policy as stated but
+// unmeasured, and a rule wrongly listed here reads as a clean result nobody
+// ever checked.
+const AUDITED_RULES = ["branch-protection", "evidence.landing-gate"];
 
 // ── source registry ─────────────────────────────────────────────────────────
 
@@ -825,7 +830,14 @@ export async function runReport(argv: string[]): Promise<number> {
 
   const report = Report.parse({
     generated_at: new Date().toISOString(),
-    baseline: { name: baselineDoc.name, enforcement: baselineDoc.enforcement },
+    baseline: {
+      name: baselineDoc.name,
+      enforcement: baselineDoc.enforcement,
+      kind: baselineDoc.kind ?? "",
+      doc: baselineDoc,
+      raw: baselineRaw,
+      audited_rules: AUDITED_RULES,
+    },
     orgs,
     evidence_limits: evidenceLimits,
   });

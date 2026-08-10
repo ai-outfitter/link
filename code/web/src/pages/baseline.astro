@@ -1,0 +1,117 @@
+---
+import Base from "../layouts/Base.astro";
+import { loadReport } from "../lib/server-data.ts";
+import "../styles/baseline.css";
+
+export const prerender = false;
+
+// The policy is read from the report rather than from the package, so this
+// page always shows the policy the numbers were produced against — even when
+// a newer catalog has since shipped.
+const report = loadReport();
+const baseline = report?.baseline ?? null;
+const doc: Record<string, any> = baseline?.doc ?? {};
+const rules: Record<string, any> = doc.rules ?? {};
+const audited: string[] = baseline?.audited_rules ?? [];
+
+// A rule is audited when the scanner emits a check for it or for one of its
+// members, so `evidence` counts as audited through `evidence.landing-gate`.
+const isAudited = (rule: string) =>
+  audited.some((id) => id === rule || id.startsWith(`${rule}.`));
+
+// The policy nests two levels at most, so render values rather than build a
+// tree component: a scalar is text, a list is comma-joined, a map is its
+// own key/value rows.
+const scalar = (value: unknown): string =>
+  Array.isArray(value) ? value.join(", ") : String(value);
+const isMap = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+---
+
+<Base title="Governance baseline">
+  <h1>Governance baseline</h1>
+
+  {!baseline && (
+    <section class="card">
+      <h2 style="margin-top:0">No report yet</h2>
+      <p>
+        The policy is read from the last scan. Run <code>link report &lt;org&gt;</code> first.
+      </p>
+    </section>
+  )}
+
+  {baseline && (
+    <>
+      <p class="dim">
+        <code>{baseline.kind || "git-forge-governance/v1"}</code> &middot;
+        <code>{baseline.name}</code> &middot; enforcement: <strong>{baseline.enforcement}</strong>
+      </p>
+      <p class="dim">
+        Every repository in the report is audited against this policy. Rules
+        marked <span class="badge">not measured</span> are part of the policy but
+        outside what a read-only forge scan can see — they are stated here, and
+        no repository is reported as passing them.
+      </p>
+
+      {doc.repos && (
+        <section class="card">
+          <h2 style="margin-top:0">Scope</h2>
+          <table>
+            <tbody>
+              {Object.entries(doc.repos).map(([key, value]) => (
+                <tr>
+                  <th>{key}</th>
+                  <td><code>{scalar(value)}</code></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {Object.entries(rules).map(([rule, body]) => (
+        <section class="card">
+          <h2 style="margin-top:0">
+            <code>{rule}</code>
+            {isAudited(rule) ? (
+              <span class="badge pass">audited</span>
+            ) : (
+              <span class="badge">not measured</span>
+            )}
+          </h2>
+          {isMap(body) ? (
+            <table>
+              <tbody>
+                {Object.entries(body).map(([key, value]) => (
+                  <tr>
+                    <th>{key}</th>
+                    <td>
+                      {isMap(value) ? (
+                        Object.entries(value).map(([k, v]) => (
+                          <div class="sub">
+                            <span class="dim">{k}</span> <code>{scalar(v)}</code>
+                          </div>
+                        ))
+                      ) : (
+                        <code>{scalar(value)}</code>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <code>{scalar(body)}</code>
+          )}
+        </section>
+      ))}
+
+      {baseline.raw && (
+        <details>
+          <summary>yaml source</summary>
+          <pre>{baseline.raw}</pre>
+        </details>
+      )}
+    </>
+  )}
+</Base>

@@ -73,9 +73,15 @@ npx @ai-outfitter/link@1 web        # http://localhost:4321; set PORT to change 
 
 `/` is the organization report; `/workflows` renders each `agent-workflow/v1`
 definition with its steps, `with:` handoffs, `posts-to:` targets, and YAML
-source. The report page manages sources directly: add a GitHub org or a local
-folder in the form and rescan — the same XDG registry the CLI uses, and the
-same scanner, run for you.
+source; `/baseline` renders the governance policy the report was audited
+against, rule by rule, and marks which rules a forge scan can measure. The
+report page manages sources directly: add a GitHub org or a local folder in
+the form and rescan — the same XDG registry the CLI uses, and the same
+scanner, run for you.
+
+The policy travels inside `report.json`, so a report filed into an org's
+`.agents` catalog can still be read against the rules it was scored under
+after the catalog moves on.
 
 The site ships prebuilt and needs no toolchain of its own. Run `report` at
 least once first: the page renders whatever the last scan wrote.

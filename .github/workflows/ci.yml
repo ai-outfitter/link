@@ -67,6 +67,7 @@ jobs:
           done
           curl -fsS -o /dev/null -w 'GET / %{http_code}\n' http://localhost:4321/
           curl -fsS -o /dev/null -w 'GET /workflows %{http_code}\n' http://localhost:4321/workflows
+          curl -fsS -o /dev/null -w 'GET /baseline %{http_code}\n' http://localhost:4321/baseline
           # The scan half must have produced both artefacts on disk.
           test -f report.json && test -f workflows.json
           kill %1

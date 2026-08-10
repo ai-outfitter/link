@@ -14,7 +14,9 @@ const sources = loadSources();
   <h1>Organization SDLC report</h1>
   <p class="dim">
     Generated {report?.generated_at ?? "never"} &middot; audited against governance baseline
-    <code>{report?.baseline.name}</code> (enforcement: {report?.baseline.enforcement})
+    <a href="/baseline"><code>{report?.baseline.name}</code></a> (enforcement: {
+      report?.baseline.enforcement
+    })
   </p>
 
   <section class="sources-panel">

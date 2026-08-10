@@ -1,0 +1,20 @@
+/* The baseline page reuses the shared card and table rules; only the
+   nested-map rows and the badge beside a rule name need anything extra. */
+.card h2 .badge {
+  margin-left: 0.6rem;
+  vertical-align: middle;
+}
+
+.card table th {
+  width: 14rem;
+  white-space: nowrap;
+}
+
+.sub + .sub {
+  margin-top: 0.2rem;
+}
+
+.sub .dim {
+  display: inline-block;
+  min-width: 8rem;
+}

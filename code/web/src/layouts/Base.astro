@@ -21,6 +21,7 @@ const path = Astro.url.pathname;
       <span class="rule"></span>
       <a href="/" class:list={[{ active: path === "/" }]}>Report</a>
       <a href="/workflows" class:list={[{ active: path.startsWith("/workflows") }]}>Workflows</a>
+      <a href="/baseline" class:list={[{ active: path.startsWith("/baseline") }]}>Baseline</a>
     </nav>
     <main>
       <slot />
