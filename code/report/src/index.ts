@@ -757,14 +757,16 @@ export async function runReport(argv: string[]): Promise<number> {
   mkdirSync(XDG_DATA, { recursive: true });
   await writeFile(join(outDir, "report.json"), body);
   await writeFile(join(XDG_DATA, "report.json"), body);
-  // Only in a checkout: the Astro dev site reads from its own source tree.
-  // An installed package must never write inside node_modules.
+  // `link web` renders /workflows from this, and reads it from XDG whether it
+  // runs from a checkout or from the published package, so it is written
+  // every run rather than only where a source tree exists.
+  const workflows = JSON.stringify(await collectWorkflows(), null, 2) + "\n";
+  await writeFile(join(XDG_DATA, "workflows.json"), workflows);
+  // Only in a checkout: the Astro dev site also reads from its own source
+  // tree. An installed package must never write inside node_modules.
   if (existsSync(DATA_DIR)) {
     await writeFile(join(DATA_DIR, "report.json"), body);
-    await writeFile(
-      join(DATA_DIR, "workflows.json"),
-      JSON.stringify(await collectWorkflows(), null, 2) + "\n",
-    );
+    await writeFile(join(DATA_DIR, "workflows.json"), workflows);
   }
 
   for (const org of report.orgs) {

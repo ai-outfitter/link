@@ -4,13 +4,29 @@
 import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const HERE = fileURLToPath(new URL(".", import.meta.url));
+// Checkout-only: the Astro dev server reads its own source tree. In the
+// published package this directory does not exist, and XDG is the only copy.
 const WEB_DATA = join(HERE, "..", "data");
-const REPORT_DIR = join(HERE, "..", "..", "..", "report");
+
+// The scanner lives beside the catalog payload, at the package root. This
+// file is bundled into dist-web/server/entry.mjs when packaged and runs from
+// code/web/src/lib in the dev server, so walk up to the payload rather than
+// counting directories — the same rule the CLI follows.
+function findRoot(from: string): string | null {
+  let dir = from;
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "governance", "sdlc-baseline.yaml"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 const XDG_CONFIG = join(
   process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
   "outfitter-link",
@@ -31,12 +47,17 @@ function readJson(path: string): any | null {
   }
 }
 
+// XDG first: every scan writes there, in a checkout and from the published
+// package alike. The source-tree copy is the checkout fallback, so the dev
+// loop still works before anything has been written to XDG.
 export function loadReport(): any | null {
-  return readJson(join(WEB_DATA, "report.json")) ?? readJson(join(XDG_DATA, "report.json"));
+  return readJson(join(XDG_DATA, "report.json")) ?? readJson(join(WEB_DATA, "report.json"));
 }
 
 export function loadWorkflows(): any[] {
-  return readJson(join(WEB_DATA, "workflows.json")) ?? [];
+  return (
+    readJson(join(XDG_DATA, "workflows.json")) ?? readJson(join(WEB_DATA, "workflows.json")) ?? []
+  );
 }
 
 export function loadSources(): Source[] {
@@ -65,20 +86,30 @@ export function removeSource(target: string): Source[] {
   return sources;
 }
 
-function bunBinary(): string {
-  const candidate = join(homedir(), ".bun", "bin", "bun");
-  return existsSync(candidate) ? candidate : "bun";
-}
-
 // Run the scanner over the registered sources; resolves when the report
 // files are rewritten. Local-development tool: the caller is the person
 // whose machine this is.
+//
+// This spawns the same `dist/cli.js` a terminal user runs, on the node that
+// is already running this server — never Bun, which the package does not
+// require, and never the TypeScript source, which it does not ship. `--out`
+// is XDG rather than the process CWD, so a rescan writes only where the site
+// reads and never litters the directory the user launched `link web` from.
 export async function runScan(): Promise<{ ok: boolean; output: string }> {
+  const root = findRoot(HERE);
+  const cli = root ? join(root, "dist", "cli.js") : null;
+  if (!cli || !existsSync(cli)) {
+    return {
+      ok: false,
+      output:
+        "cannot locate the scanner: dist/cli.js is missing. In a checkout, run `npm run build` first.",
+    };
+  }
   try {
     const { stdout, stderr } = await promisify(execFile)(
-      bunBinary(),
-      ["run", "src/index.ts"],
-      { cwd: REPORT_DIR, timeout: 5 * 60 * 1000 },
+      process.execPath,
+      [cli, "report", "--out", XDG_DATA],
+      { timeout: 5 * 60 * 1000 },
     );
     return { ok: true, output: (stdout + stderr).trim() };
   } catch (error: any) {

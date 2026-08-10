@@ -75,10 +75,39 @@ back in.
 
 ```sh
 npm --prefix code/web install
-npm --prefix code/web run dev     # http://localhost:4321
+npm --prefix code/web run dev     # http://localhost:4321, with hot reload
 ```
 
-The site is not part of the published package; `link web` needs a checkout.
+`link web` resolves in this order: the prebuilt site at `dist-web/` if one
+exists, then the Astro dev server if `code/web` is a checkout with its
+dependencies installed. In a checkout, run `npm run build:web` to test what
+users actually get, and delete `dist-web/` to go back to the dev server.
+
+### How the prebuilt site is made
+
+`npm run build:web` (`scripts/build-web.mjs`) runs `astro build`, bundles the
+adapter's `dist/server/entry.mjs` with esbuild into a single file with no
+bare imports, and copies `dist/client` beside it. Astro's node adapter emits
+an entry that needs `node_modules` at run time; bundling is what lets the
+published package serve the site without shipping Astro.
+
+Two details that will bite if you touch that script:
+
+- **`client/` must stay beside `server/`.** The adapter resolves static
+  assets relative to the entry's own URL, so flattening the layout serves
+  pages and 404s every asset.
+- **The esbuild banner aliases `createRequire`.** Bundled CJS dependencies
+  call `require`, which an ESM output has no binding for — but the generated
+  bundle already imports `createRequire` under that name, so a plain import
+  is a redeclaration `SyntaxError` at load.
+
+`build:web` runs from `prepack`, not `prepare`. `prepare` fires on every
+`npm ci` — including the Docker build and every contributor's first install
+— and would drag the site's ~90 MB of dev dependencies into all of them.
+`prepack` fires on `npm pack` and `npm publish`, exactly when the site has to
+exist, and CI's consumer test already runs `npm pack`.
+
+`dist-web/` is gitignored and listed in `files`; `files` wins for packing.
 
 ## Docker
 

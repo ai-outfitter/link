@@ -35,18 +35,42 @@ function findPackageRoot(from: string): string | null {
   return null;
 }
 
+function run(cmd: string, args: string[], opts: object = {}): Promise<number> {
+  const proc = spawn(cmd, args, { stdio: "inherit", ...opts });
+  return new Promise((resolve) => proc.on("exit", (code) => resolve(code ?? 0)));
+}
+
 async function web(): Promise<number> {
   const root = findPackageRoot(dirname(fileURLToPath(import.meta.url)));
-  const webDir = root ? join(root, "code", "web") : null;
-  if (!webDir || !existsSync(join(webDir, "package.json"))) {
-    console.error(
-      "link web needs a repository checkout: the Astro site is not part of the\n" +
-        "published package. Clone ai-outfitter/link, then run `npm --prefix code/web run dev`.",
-    );
-    return 2;
+
+  // The published package ships the site prebuilt: one bundled server file
+  // beside its client assets, needing no node_modules and no Astro at run
+  // time. PORT is the adapter's own knob, so it passes straight through.
+  const bundled = root ? join(root, "dist-web", "server", "entry.mjs") : null;
+  if (bundled && existsSync(bundled)) {
+    const port = process.env.PORT ?? "4321";
+    console.error(`link web → http://localhost:${port}`);
+    return run(process.execPath, [bundled], { env: { ...process.env, PORT: port } });
   }
-  const proc = spawn("npm", ["--prefix", webDir, "run", "dev"], { stdio: "inherit" });
-  return new Promise((resolve) => proc.on("exit", (code) => resolve(code ?? 0)));
+
+  // A checkout with no built site: the Astro dev server gives hot reload,
+  // but only once its dependencies are installed.
+  const webDir = root ? join(root, "code", "web") : null;
+  if (webDir && existsSync(join(webDir, "package.json"))) {
+    if (!existsSync(join(webDir, "node_modules"))) {
+      console.error(
+        `the site's dependencies are not installed. Run:\n  npm --prefix ${webDir} install`,
+      );
+      return 2;
+    }
+    return run("npm", ["--prefix", webDir, "run", "dev"]);
+  }
+
+  console.error(
+    "link web found no site to serve: neither a prebuilt dist-web/ nor a\n" +
+      "code/web checkout. Reinstall the package, or clone ai-outfitter/link.",
+  );
+  return 2;
 }
 
 const argv = process.argv.slice(2);
