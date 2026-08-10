@@ -87,6 +87,10 @@ jobs:
           test "$(jq -r '.orgs[0].repos | length' /tmp/one-repo/report.json)" = 1
           jq -e '.evidence_limits | map(select(test("named repositories only"))) | length == 1' \
             /tmp/one-repo/report.json > /dev/null
+          # The remediation plan is ranked, and the ranks are the product: a
+          # gap in the sequence means a step was dropped after ordering.
+          jq -e '.orgs[0].next_steps | [.[].rank] == [range(1; length + 1)]' \
+            /tmp/one-repo/report.json > /dev/null
 
   image:
     name: Build and smoke test image

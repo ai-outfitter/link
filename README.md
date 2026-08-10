@@ -118,6 +118,15 @@ manifests? SaaS coding agents (Copilot, vendor apps) are excluded by
 definition; being able to assign work to an agent whose destiny you control
 is the capability everything else builds on.
 
+Every org report ends in a ranked **plan**, not a grade. `next_steps[]`
+lists what to do, in the order that reaches the next rung: the smoke test
+first when it is unmet, then each unmet requirement of the next level in
+requirement order, then the branch-protection backlog. Each step carries
+imperative instructions and the repositories to apply them to. Every
+instruction names a signal the scanner reads, so following one changes the
+next report — advice this tool cannot then measure is advice it has no
+business giving. `gaps[]` remains, unordered, for anything that parses it.
+
 Each repository gets maturity-ramp placement (level 0–5), tree-derived
 signals (instruction files, `.agents/`, agent workflows), and a per-rule
 audit against `governance/sdlc-baseline.yaml`. Output is typed JSON

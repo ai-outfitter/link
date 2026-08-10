@@ -8,12 +8,29 @@ export const prerender = false;
 
 const report = loadReport();
 const sources = loadSources();
+
+const LEVEL_NAMES = [
+  "none",
+  "assisted",
+  "delegated",
+  "automated",
+  "governed",
+  "self-improving",
+];
+
+// Remediation instructions mark paths and file names with backticks. Escape
+// first and promote after: the strings are authored constants today, but the
+// report is data, and data is never trusted as markup.
+const escapeHtml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const inlineCode = (text: string) =>
+  escapeHtml(text).replace(/`([^`]+)`/g, "<code>$1</code>");
 ---
 
 <Base title="SDLC report">
   <h1>Organization SDLC report</h1>
   <p class="dim">
-    Generated {report?.generated_at ?? "never"} &middot; audited against governance baseline
+    Generated {report?.generated_at ?? "never"} &middot; audited against governance baseline{" "}
     <a href="/baseline"><code>{report?.baseline.name}</code></a> (enforcement: {
       report?.baseline.enforcement
     })
@@ -105,7 +122,48 @@ const sources = loadSources();
             ))}
           </ul>
 
-          {org.gaps.length > 0 && (
+          {(org.next_steps ?? []).length > 0 && (
+            <section class="plan">
+              <h3>
+                What to do next
+                <span class="dim">
+                  in the order that reaches level {org.org_level + 1} ({
+                    LEVEL_NAMES[org.org_level + 1] ?? "the next rung"
+                  })
+                </span>
+              </h3>
+              <ol>
+                {org.next_steps.map((step) => (
+                  <li>
+                    <div class="step-title">
+                      {step.title}
+                      {step.blocks_level === null ? (
+                        <span class="badge">hygiene</span>
+                      ) : (
+                        <span class="badge level">blocks level {step.blocks_level}</span>
+                      )}
+                    </div>
+                    <p class="dim why">{step.unblocks}</p>
+                    <ol class="how">
+                      {step.how.map((instruction) => (
+                        <li set:html={inlineCode(instruction)} />
+                      ))}
+                    </ol>
+                    {step.repos.length > 0 && (
+                      <p class="dim targets">
+                        <span>where:</span>
+                        {step.repos.map((repo) => (
+                          <code>{repo}</code>
+                        ))}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {(org.next_steps ?? []).length === 0 && org.gaps.length > 0 && (
             <>
               <strong>Gaps</strong>
               <ul>

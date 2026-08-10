@@ -15,6 +15,11 @@
 - Determinism is the product. Two runs of the same org must differ only in
   `generated_at` and `scanned_at`, because report diffs are what an
   organization uses to measure progress between rungs.
+- The report's output is a ranked plan, not a grade. `next_steps` is ordered
+  by what reaches the next rung, and every instruction in it must name a
+  signal the scanner reads — advice the tool cannot then measure tells an
+  organization to do work the next report will not credit. When a check
+  changes, its remediation text changes with it.
 - Record absence of evidence as absence, never as a negative fact. A forge
   scan cannot see local-only practice; `evidence_limits` bounds every claim
   the report makes.

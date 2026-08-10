@@ -25,6 +25,7 @@ import {
   BaselineCheck,
   LEVEL_NAMES,
   Milestone,
+  NextStep,
   OrgReport,
   Report,
   RepoReport,
@@ -259,6 +260,120 @@ const LEVEL_REQUIREMENTS: Record<number, string[]> = {
   4: ["bot-identity", "strict-governance"],
 };
 
+// How to clear each milestone. Every instruction names a signal the scanner
+// reads, so following one changes the next report — advice the tool cannot
+// then measure is advice this report has no business giving.
+//
+// The scanner is a file-tree heuristic, and these instructions say so where
+// the heuristic is what stands between real work and credit for it. Somebody
+// who does the work and gets no credit is the failure mode worth avoiding.
+// `empty` replaces the step when the scan finds no repository to point at.
+// A milestone can be unmet because the work is undone or because nothing
+// exists to do it to, and one instruction cannot serve both.
+const REMEDIATION: Record<
+  string,
+  { title: string; how: string[]; empty?: { title: string; how: string[] } }
+> = {
+  "e2e-smoketest": {
+    title: "Give the organization one agent it hosts itself",
+    how: [
+      "Add a CI workflow to one active repository. Put it in `.github/workflows/`, `.forgejo/workflows/`, or `.gitea/workflows/`.",
+      "Name the file for the agent, for example `agent-triage.yml`. The scan looks for `agent`, `claude`, `outfitter`, `triage`, or `review-bot` in the file name.",
+      "Do not use `setup`, `publish`, `deploy`, `build`, `image`, or `release` in the name. The scan reads those as infrastructure workflows.",
+      "Trigger the workflow from an issue event. Let it call a model and write one comment back.",
+      "As an alternative, deploy a resident agent: add `deploy/<agent>.yaml` beside a dotagents payload.",
+      "A SaaS coding agent does not satisfy this milestone. The capability being measured is an agent whose runtime the organization controls.",
+    ],
+  },
+  instructions: {
+    title: "Write contributor documentation that humans and agents both read",
+    how: [
+      "Add `AGENTS.md` to the repository root. `CLAUDE.md` also counts.",
+      "Put the shared contributor guidance in `CONTRIBUTING.md`.",
+      "Reference `CONTRIBUTING.md` from `AGENTS.md`, so one document stays authoritative.",
+      "Add `DESIGN.md` when the repository has a frontend or produces generated documents.",
+    ],
+  },
+  "shared-catalog": {
+    title: "Publish one governed catalog repository",
+    how: [
+      "Create a catalog repository. Put `agents/<name>/agent.md` or `skills/<name>/SKILL.md` at its root.",
+      "Add one `workflows/<name>.yaml` for each agent workflow.",
+      "Add `spec/agent-workflow.v1.schema.json` beside them. Without the schema the workflows are a directory, not a validated contract, and the scan does not count them.",
+      "Add a policy file under `governance/`, for example `governance/sdlc-baseline.yaml`.",
+      "Validate the workflow files against the schema in CI.",
+    ],
+  },
+  "catalog-consumed": {
+    title: "Consume the catalog from an application repository",
+    how: [
+      "Sync the catalog payload into `.agents/` in at least one application repository.",
+      "Pin the catalog version that you sync.",
+      "Commit the `.agents/` tree. Consumption through a package manager is invisible to a tree scan, so an uncommitted payload cannot be counted.",
+    ],
+  },
+  "triggered-agents": {
+    title: "Trigger an agent from continuous integration",
+    how: [
+      "Add a CI workflow that runs an agent on an issue or pull request event.",
+      "Name the workflow file for the agent, and avoid `setup`, `publish`, `deploy`, `build`, `image`, and `release`.",
+      "A forge coding agent also satisfies this milestone. `copilot-setup-steps.yml` in the CI directory is the evidence, although it does not satisfy the smoke test.",
+    ],
+  },
+  "protected-landing": {
+    title: "Protect the branches where agents land changes",
+    how: [
+      "Turn on branch protection for `main` in each repository that runs a change-landing agent workflow.",
+      "Require the `ci` status check.",
+      "Require one review.",
+      "Apply the rules to administrators.",
+      "A triage workflow does not land code and does not need this. A workflow that opens or merges pull requests does.",
+    ],
+    empty: {
+      title: "Let an agent land a change, then protect where it lands",
+      how: [
+        "No agent workflow lands code yet. A triage workflow comments and labels; it does not open or merge a pull request.",
+        "Extend one agent workflow so that it opens a pull request.",
+        "Turn on branch protection for `main` in that repository before the workflow runs.",
+        "Require the `ci` status check, require one review, and apply the rules to administrators.",
+      ],
+    },
+  },
+  "session-capture": {
+    title: "Capture the agent session before the change lands",
+    how: [
+      "Make each agent workflow upload its session transcript as a run artifact.",
+      "Add a required status check that fails when the artifact is missing.",
+      "This milestone stays unmet until the gate exists. A forge tree cannot see a transcript that nothing uploads.",
+    ],
+  },
+  "bot-identity": {
+    title: "Give the agents a capped bot identity",
+    how: [
+      "Create a forge app for the agents. Do not let an agent act as a human account.",
+      "Grant the app permission to open pull requests, comment, and request review.",
+      "Withhold merge and push-to-protected permissions.",
+      "Record the app and its permissions in the organization catalog. The scan cannot read organization-level app configuration, so it reports this as unknown until a human records it.",
+    ],
+  },
+  "strict-governance": {
+    title: "Move governance enforcement to strict",
+    how: [
+      "Confirm that the warn fraction has fallen to zero across the cohort.",
+      "Set `enforcement: strict` in `governance/sdlc-baseline.yaml`.",
+      "Do not move it back to `warn`. Effective strictness only ratchets up.",
+    ],
+  },
+  "branch-protection-backlog": {
+    title: "Clear the branch-protection backlog",
+    how: [
+      "Turn on branch protection for `main` in each listed repository.",
+      "Require the `ci` status check, require one review, and apply the rules to administrators.",
+      "This is baseline hygiene rather than a ramp blocker, so it comes after the steps above — but every later milestone assumes it.",
+    ],
+  },
+};
+
 function orgMilestones(ranked: RepoReport[]): Milestone[] {
   const names = (repos: RepoReport[]) => repos.map((r) => r.name).join(", ");
   const instr = ranked.filter((r) => r.signals.agents_md || r.signals.claude_md);
@@ -397,6 +512,86 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
       evidence: `sdlc-baseline enforcement: ${enforcement}`,
     },
   ].map((m) => Milestone.parse(m));
+}
+
+// The ordered plan. A list of everything wrong is a backlog; the order is
+// what makes it a plan, so this ranks by what the organization has to clear
+// to reach its next rung rather than by how bad each finding looks.
+function remediationPlan(
+  milestones: Milestone[],
+  orgLevel: number,
+  ranked: RepoReport[],
+  failingProtection: RepoReport[],
+): NextStep[] {
+  const byId = (id: string) => milestones.find((m) => m.id === id);
+  const names = (repos: RepoReport[]) => repos.map((r) => r.name);
+
+  // Where the work lands, when the scan can name it. No entry means the step
+  // is an organization-level decision and not a per-repository edit.
+  const targets: Record<string, () => string[]> = {
+    instructions: () =>
+      names(ranked.filter((r) => !r.signals.agents_md && !r.signals.claude_md)),
+    "catalog-consumed": () =>
+      names(ranked.filter((r) => r.role === "application" && !r.signals.dotagents_tree)),
+    "protected-landing": () =>
+      names(
+        ranked.filter(
+          (r) =>
+            (r.signals.agent_workflows.some((w) => !/triage/i.test(w)) ||
+              r.signals.copilot_agent) &&
+            !r.baseline.some((c) => c.rule === "branch-protection" && c.status === "pass"),
+        ),
+      ),
+    "session-capture": () => names(ranked.filter((r) => r.signals.agent_workflows.length > 0)),
+    "branch-protection-backlog": () => names(failingProtection),
+  };
+
+  const steps: NextStep[] = [];
+  const push = (id: string, unblocks: string, blocksLevel: number | null) => {
+    const remedy = REMEDIATION[id];
+    if (!remedy) return;
+    const repos = targets[id]?.() ?? [];
+    const variant = repos.length === 0 && remedy.empty ? remedy.empty : remedy;
+    steps.push({
+      rank: steps.length + 1,
+      milestone: id === "branch-protection-backlog" ? "" : id,
+      title: variant.title,
+      unblocks,
+      how: variant.how,
+      repos,
+      blocks_level: blocksLevel,
+    });
+  };
+
+  // The smoke test goes first whenever it is unmet, whatever rung the ramp
+  // reports. Being able to give work to an agent the organization controls
+  // is what every later milestone builds on, and it is not a level
+  // requirement, so nothing else would ever raise it.
+  const smoke = byId("e2e-smoketest");
+  if (smoke && smoke.status !== "met")
+    push("e2e-smoketest", `the end-to-end smoke test — ${smoke.evidence}`, null);
+
+  // Then the next rung, in requirement order.
+  const nextLevel = orgLevel + 1;
+  for (const id of LEVEL_REQUIREMENTS[nextLevel] ?? []) {
+    const m = byId(id);
+    if (!m || m.status === "met") continue;
+    push(
+      id,
+      `level ${nextLevel} (${LEVEL_NAMES[nextLevel]}) — ${m.title}: ${m.evidence}`,
+      nextLevel,
+    );
+  }
+
+  // Then hygiene, which no milestone owns and every later one assumes.
+  if (failingProtection.length > 0)
+    push(
+      "branch-protection-backlog",
+      `${failingProtection.length} of ${ranked.length} ranked repositories miss the baseline branch-protection rule`,
+      null,
+    );
+
+  return steps.map((step, index) => ({ ...step, rank: index + 1 }));
 }
 
 // ── github source ───────────────────────────────────────────────────────────
@@ -747,6 +942,8 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
       `${failing.length}/${ranked.length} ranked repos miss baseline branch protection (required checks + reviews)`,
     );
 
+  const nextSteps = remediationPlan(milestones, orgLevel, ranked, failing);
+
   return OrgReport.parse({
     org: unit.label,
     source_type: sourceType(unit),
@@ -761,6 +958,7 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
     org_level: orgLevel,
     org_level_name: LEVEL_NAMES[orgLevel],
     gaps,
+    next_steps: nextSteps,
   });
 }
 

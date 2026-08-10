@@ -50,6 +50,29 @@ export const Milestone = z.object({
   evidence: z.string(),
 });
 
+// One remediation action, ranked. The report's purpose is not to grade an
+// organization but to tell it what to do next, in the order that moves it up
+// the ramp, so this is the part a reader acts on.
+export const NextStep = z.object({
+  // 1 is the action to take first. The order is the product: a list of
+  // everything wrong is a backlog, and a backlog is not a plan.
+  rank: z.number().int().min(1),
+  // The milestone this unblocks; empty for baseline hygiene that no
+  // milestone owns.
+  milestone: z.string(),
+  // Imperative, one action.
+  title: z.string(),
+  // What the step buys, in the ramp's terms.
+  unblocks: z.string(),
+  // Ordered instructions. Each one matches a signal the scanner reads, so
+  // completing them changes the next report.
+  how: z.array(z.string()),
+  // Where to do the work, when the scan can name it.
+  repos: z.array(z.string()),
+  // The level this step gates, or null for hygiene.
+  blocks_level: z.number().int().min(0).max(5).nullable(),
+});
+
 export const BaselineCheck = z.object({
   rule: z.string(),
   status: z.enum(["pass", "fail", "unknown"]),
@@ -104,6 +127,9 @@ export const OrgReport = z.object({
   org_level: z.number().int().min(0).max(5),
   org_level_name: z.enum(LEVEL_NAMES),
   gaps: z.array(z.string()),
+  // The same findings as `gaps`, ordered and made actionable. `gaps` stays
+  // for anything that already parses it.
+  next_steps: z.array(NextStep).default([]),
 });
 
 export const Report = z.object({
@@ -135,6 +161,7 @@ export type OrgReport = z.infer<typeof OrgReport>;
 export type RepoReport = z.infer<typeof RepoReport>;
 export type Signals = z.infer<typeof Signals>;
 export type BaselineCheck = z.infer<typeof BaselineCheck>;
+export type NextStep = z.infer<typeof NextStep>;
 
 // Loose view of an agent-workflow/v1 document, for the web's workflow pages.
 // The authoritative validation is spec/agent-workflow.v1.schema.json in CI;
