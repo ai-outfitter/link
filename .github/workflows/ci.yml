@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # Everything the release workflow depends on, run before the tag exists.
+  # A failure at release time leaves a published GitHub release with nothing
+  # on npm or GHCR behind it, so these checks belong on the pull request.
+  package:
+    name: Build, pack and run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      # Install the tarball the way a consumer does, so a missing entry in
+      # `files` (the catalog payload especially) fails here and not on npx.
+      - name: Pack and install as a consumer
+        run: |
+          npm pack
+          mkdir -p /tmp/consumer && cd /tmp/consumer
+          npm init -y >/dev/null
+          npm install "$GITHUB_WORKSPACE"/ai-outfitter-link-*.tgz
+          ./node_modules/.bin/link help | grep -q "audit organizations"
+          # The scanner resolves its governance baseline by walking up from
+          # dist/; prove the payload shipped rather than assuming it did.
+          test -f node_modules/@ai-outfitter/link/governance/sdlc-baseline.yaml
+
+  image:
+    name: Build and smoke test image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        run: docker build -t link:ci .
+
+      - name: Smoke test image
+        run: |
+          docker run --rm link:ci help | grep -q "audit organizations"
+          docker run --rm --entrypoint sh link:ci -c 'gh --version && git --version'
