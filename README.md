@@ -38,6 +38,10 @@ release ships:
 npx @ai-outfitter/link@1 report my-org
 ```
 
+Each release is one coherent snapshot: the catalog payload and the scanner
+that audits against it move together. See [CHANGELOG.md](CHANGELOG.md) and
+the [releases page](https://github.com/ai-outfitter/link/releases).
+
 ### Container
 
 The image carries `gh` and `git`, so it needs only a token. The working
@@ -57,18 +61,6 @@ source. The report page manages sources directly: add a GitHub org or a
 local folder in the form and rescan — the same XDG registry the CLI uses,
 served by API routes on the local server. The site is not part of the
 published package; `link web` needs a checkout of this repository.
-
-## Releases
-
-Versioning and the changelog are automated with
-[release-please](https://github.com/googleapis/release-please): merges to
-`main` with conventional-commit messages accumulate into a release PR, and
-merging that PR tags the release and publishes the package. See
-[CHANGELOG.md](CHANGELOG.md) and the
-[releases page](https://github.com/ai-outfitter/link/releases). The catalog
-payload and the tooling version together — a release is one coherent
-snapshot of agents, workflows, governance, spec, and the scanner that audits
-against them.
 
 ## The report
 
@@ -103,34 +95,7 @@ into a hidden section by default. Absence of evidence is recorded as
 absence — local-only practice is invisible to a forge scan, and the report
 says so in `evidence_limits`.
 
-## Layout
+## Contributing
 
-```text
-agents/         the four sdlc-* agents (read-only planner/reviewer/explorer, engineer)
-workflows/      agent-workflow/v1 definitions (feature-request, vulnerability-fix)
-governance/     git-forge-governance/v1 baseline (sdlc-baseline)
-environments/   deployment-layer templates (copy, don't pin): github-actions, kube, kube-api
-spec/           versioned meta-schemas incl. work-graph/v1, with validated examples
-mcp.json        default MCP server bindings; agents opt in via frontmatter `mcp:`
-docs/           the SDLC reference collection documentation
-code/report/    the scanner behind `link report` (node + zod)
-code/web/       the Astro site behind `link web`
-```
-
-## Develop
-
-```sh
-npm install && npm run build          # build dist/
-node dist/cli.js report               # scan registered sources
-node dist/cli.js report add <org-or-path>
-npm --prefix code/web install && npm --prefix code/web run dev   # site
-```
-
-The scanner targets plain node so `npx` works without another toolchain; it
-runs under Bun too, which starts faster. Keep `code/report/src` free of
-Bun-only globals — `bun run code/report/src/index.ts` stays available for a
-fast edit loop, but node is the contract.
-
-In a checkout the report also lands in `code/web/src/data/report.json`,
-which the site imports statically — regenerating the report and reloading
-the page is the whole feedback loop.
+Repository layout, the development loop, the Docker build, and the release
+workflow are in [CONTRIBUTING.md](CONTRIBUTING.md).
