@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write # npm provenance (Sigstore-signed build attestation)
+  id-token: write # npm trusted publishing (OIDC) + provenance
 
 jobs:
   publish-npm:
@@ -34,11 +34,16 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # npm provenance requires a publicly verifiable source repository, so
-      # `--provenance` fails while this repo is private. Publish either way
-      # and say which happened: the sibling packages (outfitter, channels)
-      # publish with provenance from public repos, and this one joins them
-      # the moment the repo is made public.
+      # Authentication is npm trusted publishing (OIDC), the mechanism
+      # outfitter and channels use: the id-token permission and the
+      # npm-publish environment above are what npm matches the request
+      # against, so there is no token to configure. This requires a trusted
+      # publisher registered for @ai-outfitter/link on npmjs.com, pointing at
+      # this repository, this workflow file, and that environment.
+      #
+      # Provenance additionally requires a publicly verifiable source
+      # repository, so it is skipped while this repo is private and picked up
+      # automatically if it is made public.
       - name: Publish package to npm
         run: |
           if [ "${{ github.event.repository.private }}" = "true" ]; then
@@ -47,8 +52,6 @@ jobs:
           else
             npm publish --access public --provenance
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-image:
     name: Build, smoke test and push image
