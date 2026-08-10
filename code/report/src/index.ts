@@ -721,12 +721,18 @@ export async function runReport(argv: string[]): Promise<number> {
   }
 
   const ephemeral = targets.map(toSource);
-  // The local ai-outfitter checkout folder is always part of the local
-  // development report; its .agents catalog is the default eval anchor.
+  // Named targets scope the scan to themselves. A report is filed into one
+  // organization's .agents catalog, so `link report acme` must not carry
+  // every org the machine has ever registered — the operator would commit
+  // another org's inventory into acme's repository without noticing.
+  //
+  // A bare run is the local development sweep: every registered source plus
+  // the ai-outfitter checkout, whose .agents catalog is the eval anchor.
   const defaults: Source[] = existsSync(DEFAULT_FOLDER)
     ? [{ type: "folder", target: DEFAULT_FOLDER }]
     : [];
-  const sources = dedupe([...defaults, ...registered, ...ephemeral]);
+  const sources =
+    ephemeral.length > 0 ? dedupe(ephemeral) : dedupe([...defaults, ...registered]);
 
   if (sources.length === 0) {
     console.error("no sources: pass a GitHub org or folder, or `add` one first");

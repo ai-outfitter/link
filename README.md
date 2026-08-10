@@ -76,9 +76,13 @@ Sources can be GitHub orgs or **local folders** — a single checkout, an
 owner folder of clones, or a whole `~/repos/` root; hidden directories are
 included because the org/user `.agents` catalog is the canonical eval
 anchor. `link report add <org-or-path>` registers a source persistently in
-`$XDG_CONFIG_HOME/outfitter-link/sources.json`; a bare `link report` scans
-everything registered. The local `~/repos/ai-outfitter` folder is always
-included for local development, and a copy of every report also lands in
+`$XDG_CONFIG_HOME/outfitter-link/sources.json`.
+
+Named targets scope the scan to themselves: `link report acme` reports on
+acme and nothing else, because that report gets filed into acme's own
+`.agents` catalog. A bare `link report` is the development sweep instead —
+every registered source plus the local `~/repos/ai-outfitter` checkout. A
+copy of every report also lands in
 `$XDG_DATA_HOME/outfitter-link/report.json`.
 
 The first milestone in every report is the **e2e smoke test**: does any
