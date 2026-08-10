@@ -24,6 +24,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
+          # Trusted publishing needs npm >= 11.5.1. Node 22.19.0 ships npm
+          # 10.9.3, which sends no credential and makes the registry answer
+          # 404 on the scoped PUT — .node-version pins 24.x for this reason.
           node-version-file: '.node-version'
           registry-url: https://registry.npmjs.org/
           cache: npm
