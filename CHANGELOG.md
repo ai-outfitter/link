@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/ai-outfitter/link/compare/v1.1.0...v1.2.0) (2026-08-10)
+
+
+### Features
+
+* **container:** serve the report from the image ([#11](https://github.com/ai-outfitter/link/issues/11)) ([a3391f5](https://github.com/ai-outfitter/link/commit/a3391f5f1f451e6182fb915a216f3a16d199168f))
+
 ## [1.1.0](https://github.com/ai-outfitter/link/compare/v1.0.2...v1.1.0) (2026-08-10)
 
 
