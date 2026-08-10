@@ -2,7 +2,6 @@
 .github
 node_modules
 dist
-code/web
 docs
 README.md
 *.md

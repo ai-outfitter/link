@@ -47,17 +47,27 @@ function readJson(path: string): any | null {
   }
 }
 
-// XDG first: every scan writes there, in a checkout and from the published
-// package alike. The source-tree copy is the checkout fallback, so the dev
-// loop still works before anything has been written to XDG.
+// Three places, in the order they are likely to be current.
+//
+// XDG first: every scan writes there. Then the working directory, which is
+// what makes the container work — `docker run … report` writes to the bind
+// mount and that container's XDG dies with it, so /work holds the only copy
+// the next `docker run … web` can see. The source tree is last, for the
+// checkout dev loop before anything has been scanned.
+function readData(name: string): any | null {
+  return (
+    readJson(join(XDG_DATA, name)) ??
+    readJson(join(process.cwd(), name)) ??
+    readJson(join(WEB_DATA, name))
+  );
+}
+
 export function loadReport(): any | null {
-  return readJson(join(XDG_DATA, "report.json")) ?? readJson(join(WEB_DATA, "report.json"));
+  return readData("report.json");
 }
 
 export function loadWorkflows(): any[] {
-  return (
-    readJson(join(XDG_DATA, "workflows.json")) ?? readJson(join(WEB_DATA, "workflows.json")) ?? []
-  );
+  return readData("workflows.json") ?? [];
 }
 
 export function loadSources(): Source[] {

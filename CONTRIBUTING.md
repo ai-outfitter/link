@@ -114,11 +114,25 @@ exist, and CI's consumer test already runs `npm pack`.
 ```sh
 docker build -t link:dev .
 docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" link:dev report <org>
+docker run --rm -v "$PWD:/work" -p 4321:4321 link:dev web
 ```
 
 The image carries `gh` and `git` because the scanner shells out to both; node
 alone is not enough. `/work` is the working directory, so mount over it to
 keep the report.
+
+It also carries the prebuilt site, because the container is the no-toolchain
+path: someone who chose it to avoid installing node has no other way to see
+what they generated. Two consequences worth knowing:
+
+- **`ENV HOST=0.0.0.0`.** The Astro node adapter binds to `localhost` unless
+  told otherwise, which inside a container means nothing outside it can
+  connect — the published port forwards to an address with no listener.
+- **The site reads the working directory as well as XDG.** A container's XDG
+  copy dies with the container, so after `docker run … report` the mounted
+  `/work/report.json` is the only copy the next `docker run … web` can see.
+  That is also why the scanner writes `workflows.json` beside the report
+  rather than only to XDG.
 
 The image builds from source rather than installing the published tarball, so
 it works for unreleased versions and in CI before a publish. Both artifacts

@@ -37,8 +37,19 @@ const sources = loadSources();
   </section>
   <script src="../scripts/sources.ts"></script>
 
+  {!report && (
+    <section class="card">
+      <h2 style="margin-top:0">No report yet</h2>
+      <p>
+        Nothing has been scanned on this machine. Run <code>link report &lt;org&gt;</code>, or add a
+        source above and rescan. In a container, the report is read from the mounted working
+        directory, so scan and serve with the same <code>-v "$PWD:/work"</code>.
+      </p>
+    </section>
+  )}
+
   {
-    report.orgs.map((org) => {
+    (report?.orgs ?? []).map((org) => {
       const ranked = org.repos.filter((repo) => repo.active && repo.role !== "meta");
       const unranked = org.repos.filter((repo) => !repo.active || repo.role === "meta");
       const statusGlyph = { met: "✓", unmet: "✗", unknown: "?" };
@@ -103,9 +114,15 @@ const sources = loadSources();
     })
   }
 
-  <h2>Evidence limits</h2>
-  <ul class="dim">
-    {report.evidence_limits.map((limit) => <li>{limit}</li>)}
-  </ul>
+  {report && (
+    <>
+      <h2>Evidence limits</h2>
+      <ul class="dim">
+        {report.evidence_limits.map((limit) => (
+          <li>{limit}</li>
+        ))}
+      </ul>
+    </>
+  )}
 </Base>
 
