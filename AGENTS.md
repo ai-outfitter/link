@@ -18,6 +18,10 @@
 - Record absence of evidence as absence, never as a negative fact. A forge
   scan cannot see local-only practice; `evidence_limits` bounds every claim
   the report makes.
+- A scan scoped to named repositories reports a level for those repositories,
+  not for the organization. `source_type` and `evidence_limits` must both say
+  so. A scoped number presented as an org number is the worst failure this
+  tool has, because it is wrong while looking right.
 - Node is the contract, for the scanner and the web server alike — see
   CONTRIBUTING.md. Bun is a faster runtime for the edit loop, not a target,
   and nothing may spawn it: the published package does not require it.

@@ -58,6 +58,17 @@ it. That is deliberate: a report gets filed into one organization's `.agents`
 catalog, so `link report acme` must not carry every org the machine has ever
 registered.
 
+A target resolves to a folder if it exists on disk, otherwise `owner/repo` if
+it matches that shape, otherwise an org. Disk wins so a directory named like
+a slug is never mistaken for a forge coordinate. Repository targets are
+fetched with `gh repo view` — `gh repo list` cannot address a single
+repository — and join the unit for their owner, so scan units stay
+one-per-owner whatever mix of orgs, repositories, and folders was passed.
+
+Keep `source_type` honest when touching this. It is how a reader tells
+whether a level describes an organization or only the repositories that were
+named, and `evidence_limits` says the same thing in words.
+
 In a checkout the report also lands in `code/web/src/data/report.json`, which
 the site imports statically — regenerating the report and reloading the page
 is the whole feedback loop.

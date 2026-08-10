@@ -71,6 +71,22 @@ jobs:
           test -f report.json && test -f workflows.json
           kill %1
 
+      # A single repository is a first-class target, not only an org. This
+      # scans the workflow's own repository with its own token, so it needs
+      # no extra secret.
+      - name: Scan a single repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd /tmp/consumer
+          ./node_modules/.bin/link report "$GITHUB_REPOSITORY" --out /tmp/one-repo
+          # Scoped, and labelled as scoped: a level derived from one
+          # repository must never read as the organization's level.
+          test "$(jq -r '.orgs[0].source_type' /tmp/one-repo/report.json)" = github-repo
+          test "$(jq -r '.orgs[0].repos | length' /tmp/one-repo/report.json)" = 1
+          jq -e '.evidence_limits | map(select(test("named repositories only"))) | length == 1' \
+            /tmp/one-repo/report.json > /dev/null
+
   image:
     name: Build and smoke test image
     runs-on: ubuntu-latest
