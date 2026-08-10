@@ -42,10 +42,16 @@ npm run build          # tsc → dist/
 ## Run the scanner
 
 ```sh
+node dist/cli.js review ai-outfitter          # scan, then serve
 node dist/cli.js report                       # the registered-source sweep
 node dist/cli.js report ai-outfitter          # one org, scoped
 node dist/cli.js report add <org-or-path>     # register a source
 ```
+
+`review` is `report` followed by `web`, and stops if the scan fails: serving
+the previous report under a fresh org's name is worse than reporting the
+failure. It is the container's default command, so one `docker run` scans
+and serves.
 
 Named targets replace the source registry for that run rather than adding to
 it. That is deliberate: a report gets filed into one organization's `.agents`
