@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/ai-outfitter/link/compare/v1.3.0...v1.4.0) (2026-08-10)
+
+
+### Features
+
+* **report:** accept a single repository, not only an org ([#15](https://github.com/ai-outfitter/link/issues/15)) ([332e2a2](https://github.com/ai-outfitter/link/commit/332e2a2925f3edff259f283eae111b9150606e08))
+
 ## [1.3.0](https://github.com/ai-outfitter/link/compare/v1.2.0...v1.3.0) (2026-08-10)
 
 
