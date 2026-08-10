@@ -22,7 +22,7 @@ const sources = loadSources();
       <input
         id="source-target"
         name="target"
-        placeholder="github org, or a local folder path (~/repos/ncrmro)"
+        placeholder="github org, or a local folder path (~/repos/acme)"
         autocomplete="off"
       />
       <button type="submit">add source</button>
@@ -30,9 +30,8 @@ const sources = loadSources();
       <span id="scan-status" class="dim"></span>
     </form>
     <p class="dim registered">
-      registered: {sources.length === 0 && <span>none (defaults only)</span>}
+      registered: {sources.length === 0 && <span>none</span>}
       {sources.map((source) => <code data-source={source.target}>{source.target}</code>)}
-      &middot; <span>~/repos/ai-outfitter always included</span>
     </p>
   </section>
   <script src="../scripts/sources.ts"></script>

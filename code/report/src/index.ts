@@ -4,8 +4,7 @@
 //
 // Sources are persistent: `add <target>` registers a GitHub org or a folder
 // in $XDG_CONFIG_HOME/outfitter-link/sources.json; a bare run scans every
-// registered source. ~/repos/ai-outfitter is always included for local
-// development, and an org/user's .agents catalog folder is the canonical
+// registered source. An org/user's .agents catalog folder is the canonical
 // eval anchor — folder expansion therefore includes hidden directories.
 //
 // Usage:
@@ -61,7 +60,6 @@ const XDG_DATA = join(
   "outfitter-link",
 );
 const SOURCES_FILE = join(XDG_CONFIG, "sources.json");
-const DEFAULT_FOLDER = join(homedir(), "repos", "ai-outfitter");
 const REPO_LIMIT = 30;
 const CONCURRENCY = 8;
 // A repo with no push in this window is inactive: still scanned and shown,
@@ -795,13 +793,10 @@ export async function runReport(argv: string[]): Promise<number> {
   // every org the machine has ever registered — the operator would commit
   // another org's inventory into acme's repository without noticing.
   //
-  // A bare run is the local development sweep: every registered source plus
-  // the ai-outfitter checkout, whose .agents catalog is the eval anchor.
-  const defaults: Source[] = existsSync(DEFAULT_FOLDER)
-    ? [{ type: "folder", target: DEFAULT_FOLDER }]
-    : [];
-  const sources =
-    ephemeral.length > 0 ? dedupe(ephemeral) : dedupe([...defaults, ...registered]);
+  // A bare run scans the registered sources and nothing else. The tool ships
+  // with no source of its own: a machine that has registered nothing has
+  // nothing to scan, and says so.
+  const sources = ephemeral.length > 0 ? dedupe(ephemeral) : dedupe(registered);
 
   if (sources.length === 0) {
     console.error("no sources: pass a GitHub org or folder, or `add` one first");

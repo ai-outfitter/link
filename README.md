@@ -101,9 +101,8 @@ rather than `github-org`.
 
 Named targets scope the scan to themselves: `link report acme` reports on
 acme and nothing else, because that report gets filed into acme's own
-`.agents` catalog. A bare `link report` is the development sweep instead —
-every registered source plus the local `~/repos/ai-outfitter` checkout. A
-copy of every report also lands in
+`.agents` catalog. A bare `link report` sweeps every registered source
+instead. A copy of every report also lands in
 `$XDG_DATA_HOME/outfitter-link/report.json`.
 
 The first milestone in every report is the **e2e smoke test**: does any
