@@ -22,10 +22,15 @@ import { join, resolve, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import {
+  BypassActor,
+  contributingRulesets,
   defaultEvidenceBackend,
   detectEvidenceGate,
+  directPushesBlocked,
   EVIDENCE_BACKENDS,
   evidenceBackendById,
+  MergedPr,
+  readBypassActors,
   requiredCheckContexts,
 } from "./evidence.js";
 import {
@@ -137,6 +142,10 @@ type RepoInput = {
   agentsMdBody: string | null;
   branchRules: any[] | null;
   rulesNote: string;
+  // Fetched only where they change an answer; null means not looked at, or
+  // looked at and not readable. Either way: unknown, not absent.
+  bypassActors: BypassActor[] | null;
+  sample: MergedPr[] | null;
 };
 
 const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot|review-bot/i;
@@ -260,6 +269,9 @@ function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
     paths: input.paths,
     requiredChecks: requiredCheckContexts(input.branchRules),
     hasBranchRules: input.branchRules !== null,
+    directPushesBlocked: directPushesBlocked(input.branchRules),
+    bypassActors: input.bypassActors,
+    sample: input.sample,
   });
   const signals = classifySignals(input.paths, input.agentsMdBody, evidenceGate);
   const baseline = auditBaseline(signals, input);
@@ -747,6 +759,21 @@ async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoIn
     "api",
     `repos/${org}/${listing.name}/rules/branches/${branch}`,
   ]);
+
+  // Bypass lists and the merged-pull-request sample cost one request each, so
+  // they are fetched only where they change an answer: a repository that
+  // neither lands agent changes nor carries any evidence shape is scanned
+  // exactly as cheaply as before.
+  const evidenceRelevant =
+    evidenceShaped(paths, requiredCheckContexts(branchRules)) ||
+    landsAgentChanges(paths);
+  const [bypassActors, sample] = evidenceRelevant
+    ? await Promise.all([
+        fetchBypassActors(org, listing.name, branchRules),
+        fetchMergedSample(org, listing.name),
+      ])
+    : [null, null];
+
   return {
     name: listing.name,
     visibility: listing.visibility.toLowerCase(),
@@ -756,7 +783,74 @@ async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoIn
     agentsMdBody,
     branchRules,
     rulesNote: "branch rules endpoint not readable with this token",
+    bypassActors,
+    sample,
   };
+}
+
+// Cheap predicates over data already in hand, so the decision to spend two
+// more requests costs nothing itself.
+function evidenceShaped(paths: string[], requiredChecks: string[]): boolean {
+  return (
+    requiredChecks.some((c) => /evidence|transcript|session-capture|audit/i.test(c)) ||
+    paths.some((p) => /evidence|transcript|session-capture|audit|pensieve/i.test(p))
+  );
+}
+
+function landsAgentChanges(paths: string[]): boolean {
+  const ci = paths.filter((p) => CI_DIR.test(p) && /\.ya?ml$/.test(p));
+  return ci.some(
+    (p) =>
+      p.includes("copilot-setup-steps") ||
+      (AGENT_WORKFLOW_HINT.test(p) && !AGENT_WORKFLOW_EXCLUDE.test(p) && !/triage/i.test(p)),
+  );
+}
+
+// The bypass lists of every ruleset contributing a rule to this branch. An
+// organization-level ruleset needs org admin to read, so a scan that cannot
+// see one returns null — unknown, never "nobody bypasses".
+async function fetchBypassActors(
+  org: string,
+  repo: string,
+  branchRules: any[] | null,
+): Promise<BypassActor[] | null> {
+  const sources = contributingRulesets(branchRules);
+  if (sources.length === 0) return branchRules === null ? null : [];
+  const lists = await mapLimit(sources, CONCURRENCY, async (source) => {
+    const ruleset = await ghJson<any>(["api", `repos/${org}/${repo}/rulesets/${source.id}`]);
+    return ruleset === null ? null : readBypassActors(ruleset);
+  });
+  if (lists.some((list) => list === null)) return null;
+  return lists.flat() as BypassActor[];
+}
+
+// Was the gate exercised? A required check that never reports leaves a
+// pending status and gates nothing, so "required" is not the same fact as
+// "ran". The sample is defined in pull requests rather than days, so the
+// number is stable between runs of different length.
+const MERGED_SAMPLE = 10;
+
+async function fetchMergedSample(org: string, repo: string): Promise<MergedPr[] | null> {
+  const prs = await ghJson<any[]>([
+    "pr",
+    "list",
+    "--repo",
+    `${org}/${repo}`,
+    "--state",
+    "merged",
+    "--limit",
+    String(MERGED_SAMPLE),
+    "--json",
+    "number,statusCheckRollup",
+  ]);
+  if (prs === null) return null;
+  return prs.map((pr) => ({
+    number: Number(pr.number),
+    checks: (pr.statusCheckRollup ?? []).map((check: any) => ({
+      name: String(check?.name ?? check?.context ?? ""),
+      conclusion: String(check?.conclusion ?? check?.state ?? "").toUpperCase(),
+    })),
+  }));
 }
 
 // ── folder source ───────────────────────────────────────────────────────────
@@ -812,6 +906,8 @@ async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | nul
     agentsMdBody,
     branchRules: null,
     rulesNote: "local checkout; forge branch rules not queried",
+    bypassActors: null,
+    sample: null,
   };
 }
 

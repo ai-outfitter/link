@@ -9,6 +9,17 @@
 // Run with `npm run test:evidence` after `npm run build`.
 import { detectEvidenceGate, requiredCheckContexts } from "../dist/evidence.js";
 
+// Defaults for the inputs a fixture is not exercising. Direct pushes blocked
+// and no bypass actors is the conforming baseline, so a fixture that does not
+// mention them is testing the check logic alone.
+const detect = (input) =>
+  detectEvidenceGate({
+    directPushesBlocked: true,
+    bypassActors: [],
+    sample: null,
+    ...input,
+  });
+
 let failures = 0;
 
 function check(name, actual, expected) {
@@ -50,7 +61,7 @@ check(
 check("unreadable rules yield no contexts", requiredCheckContexts(null), []);
 
 // The gate is required: met. This is the transition the remediation promises.
-const met = detectEvidenceGate({
+const met = detect({
   paths: PENSIEVE_TREE,
   requiredChecks: requiredCheckContexts(RULES_WITH_EVIDENCE_CHECK),
   hasBranchRules: true,
@@ -63,7 +74,7 @@ check("required evidence check is met", [met.backend, met.status, met.declared_o
 
 // A required check with no gate files in tree is still met: the ruleset is
 // the control, and it may be defined at organization level.
-const orgLevelRuleset = detectEvidenceGate({
+const orgLevelRuleset = detect({
   paths: ["README.md"],
   requiredChecks: ["evidence/commits"],
   hasBranchRules: true,
@@ -75,7 +86,7 @@ check(
 );
 
 // The whole example tree, required by nothing: the CICD-001.1.2 trap.
-const declaredOnly = detectEvidenceGate({
+const declaredOnly = detect({
   paths: PENSIEVE_TREE,
   requiredChecks: requiredCheckContexts(RULES_WITHOUT),
   hasBranchRules: true,
@@ -87,7 +98,7 @@ check(
 );
 
 // Unreadable rules must not read as absence.
-const unreadable = detectEvidenceGate({
+const unreadable = detect({
   paths: PENSIEVE_TREE,
   requiredChecks: [],
   hasBranchRules: false,
@@ -97,13 +108,13 @@ check("unreadable rules yield unknown, not unmet", unreadable.status, "unknown")
 // Nothing at all: no backend claims the repository.
 check(
   "an unrelated repository yields no finding",
-  detectEvidenceGate({ paths: ["README.md", "src/main.ts"], requiredChecks: ["ci"], hasBranchRules: true }),
+  detect({ paths: ["README.md", "src/main.ts"], requiredChecks: ["ci"], hasBranchRules: true }),
   null,
 );
 
 // The generic backend keeps the milestone reachable without Pensieve, and
 // names the context it matched so a false positive is visible.
-const generic = detectEvidenceGate({
+const generic = detect({
   paths: [".github/workflows/audit-trail.yml"],
   requiredChecks: ["session-capture/verify"],
   hasBranchRules: true,
@@ -120,12 +131,121 @@ if (!generic.evidence.includes("session-capture/verify")) {
 }
 
 // Pensieve wins when both match: its shape is specified, the other inferred.
-const both = detectEvidenceGate({
+const both = detect({
   paths: [...PENSIEVE_TREE, ".github/workflows/audit-trail.yml"],
   requiredChecks: ["evidence/commits", "audit/verify"],
   hasBranchRules: true,
 });
 check("pensieve takes precedence over the generic backend", both.backend, "pensieve");
+
+// ── direct pushes ───────────────────────────────────────────────────────────
+
+// A required check is only a control on the pull-request path. With direct
+// pushes allowed, a commit reaches the branch without passing anything, so
+// the gate is not met however well the check is configured (CICD-001.9.3).
+const directPush = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  directPushesBlocked: false,
+});
+check("direct pushes allowed is not met", directPush.status, "unmet");
+if (!directPush.gaps.some((g) => g.includes("direct pushes"))) {
+  failures++;
+  console.error("FAIL direct-push gap must be named");
+} else {
+  console.log("ok   direct-push gap is named");
+}
+
+// ── bypass actors ───────────────────────────────────────────────────────────
+
+// `always` bypass makes the whole ruleset optional for that actor. A
+// break-glass path may exist, but it has to be recorded and produce its own
+// evidence — a silent ruleset exemption is not one (CICD-001.7.4).
+const bypassed = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  bypassActors: [{ who: "organization admins", mode: "always" }],
+});
+check("an unconditional bypass actor is not met", bypassed.status, "unmet");
+if (!bypassed.evidence.includes("organization admins")) {
+  failures++;
+  console.error("FAIL bypass actor must be named in the evidence");
+} else {
+  console.log("ok   bypass actor is named");
+}
+
+// A pull-request-scoped bypass relaxes the flow, not the branch, so it is
+// recorded without demoting the finding.
+const prScopedBypass = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  bypassActors: [{ who: "repository role 5", mode: "pull_request" }],
+});
+check("a pull-request-scoped bypass stays met", prScopedBypass.status, "met");
+check(
+  "a pull-request-scoped bypass is still recorded",
+  prScopedBypass.bypass_actors.length,
+  1,
+);
+
+// An unreadable bypass list is unknown, never empty: an organization-level
+// ruleset needs org admin to read.
+const unknownBypass = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  bypassActors: null,
+});
+check("an unreadable bypass list does not invent an empty one", unknownBypass.bypass_actors, []);
+
+// ── exercised ───────────────────────────────────────────────────────────────
+
+// Required and reporting are different facts. A check that never runs leaves
+// a pending status and gates nothing.
+const notReporting = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  sample: [
+    { number: 41, checks: [{ name: "ci", conclusion: "SUCCESS" }] },
+    { number: 42, checks: [{ name: "ci", conclusion: "SUCCESS" }] },
+  ],
+});
+check("a required check that never reported is not met", notReporting.status, "unmet");
+check("the ungated merges are named", notReporting.sample, {
+  merged_prs: 2,
+  gated: 0,
+  ungated: [41, 42],
+});
+
+// Wired and exercised: the whole ladder short of verified.
+const exercised = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  sample: [
+    {
+      number: 43,
+      checks: [
+        { name: "ci", conclusion: "SUCCESS" },
+        { name: "evidence/commits", conclusion: "SUCCESS" },
+      ],
+    },
+  ],
+});
+check("a reporting check is met", [exercised.status, exercised.sample.gated], ["met", 1]);
+
+// A failing evidence check does not count as gated.
+const failingCheck = detect({
+  paths: PENSIEVE_TREE,
+  requiredChecks: ["evidence/commits"],
+  hasBranchRules: true,
+  sample: [{ number: 44, checks: [{ name: "evidence/commits", conclusion: "FAILURE" }] }],
+});
+check("a failing evidence check is not gated", failingCheck.sample.gated, 0);
 
 console.log(failures === 0 ? "\nevidence backends: all fixtures pass" : `\n${failures} failing`);
 process.exit(failures === 0 ? 0 : 1);

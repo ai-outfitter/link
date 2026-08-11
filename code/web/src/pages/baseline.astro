@@ -110,10 +110,18 @@ const isMap = (value: unknown): value is Record<string, unknown> =>
         <section class="card">
           <h2 style="margin-top:0">Evidence gate backends</h2>
           <p class="dim">
-            <code>evidence.landing-gate</code> is satisfied by any of these. The scan
-            reads whether a gate is <em>wired</em> — a status check that an effective
-            branch rule requires — never whether it ever fired: that needs a
-            credential for the evidence store, and this scan holds none.
+            <code>evidence.landing-gate</code> is satisfied by any of these. A gate
+            counts as met only when it is <strong>wired</strong> — an effective branch
+            rule requires the check — and <strong>exercised</strong>: the check
+            actually reported on what landed. Whether it ever <strong>fired</strong>,
+            meaning the evidence records exist and verify, needs a credential for the
+            store, so it is <code>pensieve verify</code>'s question and not this
+            scan's.
+          </p>
+          <p class="dim">
+            Three things demote a gate that looks configured: direct pushes to the
+            default branch, an actor with unconditional ruleset bypass, and a required
+            check that never reports.
           </p>
           <table>
             <tbody>

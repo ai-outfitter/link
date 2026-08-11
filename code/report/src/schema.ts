@@ -20,6 +20,31 @@ export const EvidenceFinding = z.object({
   // as unmet however complete the files are.
   declared_only: z.boolean(),
   tiers: z.array(z.string()),
+  // The matched required check contexts.
+  required_checks: z.array(z.string()).default([]),
+  // Requiring a pull request is the only preventive direct-push control on a
+  // forge with no pre-receive hook (CICD-001.9.3). Null when unreadable.
+  direct_pushes_blocked: z.boolean().nullable().default(null),
+  // Who may route around the ruleset. `always` makes the gate optional for
+  // that actor; a silent ruleset bypass is not a recorded break-glass path.
+  bypass_actors: z
+    .array(z.object({ who: z.string(), mode: z.string() }))
+    .default([]),
+  // Whether the gate was exercised: how many recently merged pull requests
+  // carried a passing evidence check. Required and reporting are different
+  // facts. Null when not sampled.
+  sample: z
+    .object({
+      merged_prs: z.number().int().min(0),
+      gated: z.number().int().min(0),
+      ungated: z.array(z.number().int()),
+    })
+    .nullable()
+    .default(null),
+  // Everything standing between this repository and a met finding. Empty is
+  // what makes a finding met, so a new obligation cannot be added without
+  // also being reported.
+  gaps: z.array(z.string()).default([]),
   evidence: z.string(),
   docs: z.string(),
 });

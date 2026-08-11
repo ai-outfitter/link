@@ -177,11 +177,17 @@ returns a finding, or `null` when nothing of its shape is present. Three rules:
   `rulesets/*.json` in the tree is an import source; the effective branch rules
   are the only proof that a check is required. A gate the branch can omit is
   not a gate.
-- **Unreadable rules are `unknown`, not `unmet`.** A gate that cannot be seen
-  has not been shown to be missing.
-- **No network.** Verifying that evidence records exist needs a store
-  credential and belongs to `pensieve verify`. This scan reports whether the
-  gate is wired, never whether it fired.
+- **Wired is not enough; exercised is the bar.** A required check that never
+  reports gates nothing, so the last ten merged pull requests are sampled for
+  a passing check. Add an obligation by pushing to `gaps`, never by widening
+  the status directly — a finding is `met` exactly when `gaps` is empty, which
+  is what stops an obligation being added without being reported.
+- **Unreadable is `unknown`, not `unmet`.** Rules that cannot be read, and a
+  bypass list behind org admin, are both unknown. Never invent an empty list.
+- **Verification is out of scope.** Whether evidence records exist needs a
+  store credential and belongs to `pensieve verify`. This scan reports whether
+  the gate is wired and exercised, never whether it fired. Reads are limited to
+  the forge; a backend must not reach an evidence store.
 
 Add fixtures to `scripts/test-evidence.mjs` in the same change. That file
 exists because `session-capture` was a hardcoded `unmet` for months, which

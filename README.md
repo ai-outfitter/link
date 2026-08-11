@@ -150,16 +150,34 @@ a scanner that recognized only ai-outfitter's own evidence system would be
 grading strangers on whether they adopted our product and calling the result a
 maturity level.
 
-Two boundaries hold the design honest:
+A gate is `met` only when it is **wired** — an effective branch rule requires
+the check — and **exercised**: the check actually reported on what landed.
+Whether it ever **fired**, meaning the records exist and verify, needs a
+credential for the evidence store, so it belongs to `pensieve verify` and the
+CI gate, not to a read-only forge scan.
 
-- **Wired, never fired.** A required status check is the control; whether any
-  evidence record was ever written is a question for `pensieve verify` and the
-  CI gate, which authenticate to a store with a workload identity. A read-only
-  forge scan holds no such credential and does not pretend to.
-- **A gate the branch can omit is not a gate.** A repository carrying every
-  workflow and policy file that no effective rule requires is reported
-  `declared only` and counts as unmet — [CICD-001.1.2](https://github.com/ai-outfitter/pensieve/blob/main/docs/requirements/CICD-001-evidence-gates.md).
+Four things demote a gate that looks configured, each reported by name:
+
+- **No effective rule requires the check.** A repository carrying every
+  workflow and policy file that nothing requires is `declared only` —
+  [CICD-001.1.2](https://github.com/ai-outfitter/pensieve/blob/main/docs/requirements/CICD-001-evidence-gates.md).
   In-tree `rulesets/*.json` are import sources, not active rules.
+- **Direct pushes reach the default branch.** github.com has no pre-receive
+  hook, so requiring a pull request is the only preventive direct-push control
+  (CICD-001.9.3). Without it a commit lands having passed nothing.
+- **An actor bypasses the ruleset unconditionally.** A break-glass path may
+  exist, but it has to be recorded and produce its own evidence; a silent
+  ruleset bypass is not one (CICD-001.7.4). A pull-request-scoped bypass is
+  recorded without demoting the gate.
+- **The required check never reports.** The last ten merged pull requests are
+  sampled for a passing check. A required check that never runs leaves a
+  pending status and gates nothing — required and reporting are different
+  facts.
+
+The bypass and sample lookups cost one request each and run only where they
+change an answer, so a repository that neither lands agent changes nor carries
+an evidence shape is scanned exactly as cheaply as before. A bypass list that
+needs org admin to read is reported unknown, never empty.
 
 Each repository gets maturity-ramp placement (level 0–5), tree-derived
 signals (instruction files, `.agents/`, agent workflows), and a per-rule
