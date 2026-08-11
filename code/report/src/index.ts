@@ -260,6 +260,15 @@ const LEVEL_REQUIREMENTS: Record<number, string[]> = {
   4: ["bot-identity", "strict-governance"],
 };
 
+// The rung each milestone gates, inverted from LEVEL_REQUIREMENTS so the two
+// cannot drift. A milestone absent from the map gates no rung: the smoke
+// test is a precondition of the ramp rather than a step on it.
+const MILESTONE_LEVEL: Record<string, number> = Object.fromEntries(
+  Object.entries(LEVEL_REQUIREMENTS).flatMap(([level, ids]) =>
+    ids.map((id) => [id, Number(level)]),
+  ),
+);
+
 // How to clear each milestone. Every instruction names a signal the scanner
 // reads, so following one changes the next report — advice the tool cannot
 // then measure is advice this report has no business giving.
@@ -511,7 +520,7 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
       status: enforcement === "strict" ? "met" : "unmet",
       evidence: `sdlc-baseline enforcement: ${enforcement}`,
     },
-  ].map((m) => Milestone.parse(m));
+  ].map((m) => Milestone.parse({ ...m, level: MILESTONE_LEVEL[m.id] ?? null }));
 }
 
 // The ordered plan. A list of everything wrong is a backlog; the order is
@@ -547,7 +556,12 @@ function remediationPlan(
   };
 
   const steps: NextStep[] = [];
-  const push = (id: string, unblocks: string, blocksLevel: number | null) => {
+  const push = (
+    id: string,
+    unblocks: string,
+    blocksLevel: number | null,
+    group: NextStep["group"],
+  ) => {
     const remedy = REMEDIATION[id];
     if (!remedy) return;
     const repos = targets[id]?.() ?? [];
@@ -560,6 +574,7 @@ function remediationPlan(
       how: variant.how,
       repos,
       blocks_level: blocksLevel,
+      group,
     });
   };
 
@@ -569,18 +584,23 @@ function remediationPlan(
   // requirement, so nothing else would ever raise it.
   const smoke = byId("e2e-smoketest");
   if (smoke && smoke.status !== "met")
-    push("e2e-smoketest", `the end-to-end smoke test — ${smoke.evidence}`, null);
+    push("e2e-smoketest", `the end-to-end smoke test — ${smoke.evidence}`, null, "foundation");
 
-  // Then the next rung, in requirement order.
-  const nextLevel = orgLevel + 1;
-  for (const id of LEVEL_REQUIREMENTS[nextLevel] ?? []) {
-    const m = byId(id);
-    if (!m || m.status === "met") continue;
-    push(
-      id,
-      `level ${nextLevel} (${LEVEL_NAMES[nextLevel]}) — ${m.title}: ${m.evidence}`,
-      nextLevel,
-    );
+  // Every rung still ahead, nearest first and in requirement order inside
+  // each rung. The rung after next is not actionable yet, but grouping the
+  // whole ramp is what lets a reader see the shape of the climb instead of
+  // one step of it — and the ramp is cumulative, so a later rung's work
+  // never becomes irrelevant.
+  const levels = Object.keys(LEVEL_REQUIREMENTS)
+    .map(Number)
+    .filter((level) => level > orgLevel)
+    .sort((a, b) => a - b);
+  for (const level of levels) {
+    for (const id of LEVEL_REQUIREMENTS[level]) {
+      const m = byId(id);
+      if (!m || m.status === "met") continue;
+      push(id, `level ${level} (${LEVEL_NAMES[level]}) — ${m.title}: ${m.evidence}`, level, "level");
+    }
   }
 
   // Then hygiene, which no milestone owns and every later one assumes.
@@ -589,6 +609,7 @@ function remediationPlan(
       "branch-protection-backlog",
       `${failingProtection.length} of ${ranked.length} ranked repositories miss the baseline branch-protection rule`,
       null,
+      "hygiene",
     );
 
   return steps.map((step, index) => ({ ...step, rank: index + 1 }));

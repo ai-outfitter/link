@@ -25,6 +25,20 @@ const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const inlineCode = (text: string) =>
   escapeHtml(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+// Group the plan into runs of consecutive steps that share a rung. The
+// scanner already emitted them in priority order, so grouping consecutive
+// runs keeps the ranks ascending down the page: the rung is what a reader
+// scans for, and the numbering still says what to do first.
+const planBands = (steps: any[]) => {
+  const bands: { group: string; level: number | null; steps: any[] }[] = [];
+  for (const step of steps) {
+    const last = bands[bands.length - 1];
+    if (last && last.group === step.group && last.level === step.blocks_level) last.steps.push(step);
+    else bands.push({ group: step.group ?? "level", level: step.blocks_level, steps: [step] });
+  }
+  return bands;
+};
 ---
 
 <Base title="SDLC report">
@@ -116,6 +130,9 @@ const inlineCode = (text: string) =>
             {org.milestones.map((m) => (
               <li class:list={[m.status]}>
                 <span class="glyph">{statusGlyph[m.status]}</span>
+                <span class="rung" title={m.level ? `gates level ${m.level}` : "gates the whole ramp"}>
+                  {m.level ? `L${m.level}` : "—"}
+                </span>
                 <span class="mtitle">{m.title}</span>
                 <span class="dim">{m.evidence}</span>
               </li>
@@ -127,39 +144,45 @@ const inlineCode = (text: string) =>
               <h3>
                 What to do next
                 <span class="dim">
-                  in the order that reaches level {org.org_level + 1} ({
+                  by the rung each step reaches; level {org.org_level + 1} ({
                     LEVEL_NAMES[org.org_level + 1] ?? "the next rung"
-                  })
+                  }) is the one in reach
                 </span>
               </h3>
-              <ol>
-                {org.next_steps.map((step) => (
-                  <li>
-                    <div class="step-title">
-                      {step.title}
-                      {step.blocks_level === null ? (
-                        <span class="badge">hygiene</span>
-                      ) : (
-                        <span class="badge level">blocks level {step.blocks_level}</span>
-                      )}
-                    </div>
-                    <p class="dim why">{step.unblocks}</p>
-                    <ol class="how">
-                      {step.how.map((instruction) => (
-                        <li set:html={inlineCode(instruction)} />
-                      ))}
-                    </ol>
-                    {step.repos.length > 0 && (
-                      <p class="dim targets">
-                        <span>where:</span>
-                        {step.repos.map((repo) => (
-                          <code>{repo}</code>
-                        ))}
-                      </p>
+              {planBands(org.next_steps).map((band) => (
+                <section class:list={["band", band.group, { reach: band.level === org.org_level + 1 }]}>
+                  <h4>
+                    {band.group === "foundation" && "Before the ramp"}
+                    {band.group === "level" && `Level ${band.level} · ${LEVEL_NAMES[band.level]}`}
+                    {band.group === "hygiene" && "Baseline hygiene"}
+                    {band.level === org.org_level + 1 && <span class="badge level">next rung</span>}
+                    {band.group === "foundation" && (
+                      <span class="badge">blocks every rung</span>
                     )}
-                  </li>
-                ))}
-              </ol>
+                  </h4>
+                  <ol start={band.steps[0].rank}>
+                    {band.steps.map((step) => (
+                      <li>
+                        <div class="step-title">{step.title}</div>
+                        <p class="dim why">{step.unblocks}</p>
+                        <ol class="how">
+                          {step.how.map((instruction) => (
+                            <li set:html={inlineCode(instruction)} />
+                          ))}
+                        </ol>
+                        {step.repos.length > 0 && (
+                          <p class="dim targets">
+                            <span>where:</span>
+                            {step.repos.map((repo) => (
+                              <code>{repo}</code>
+                            ))}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
             </section>
           )}
 

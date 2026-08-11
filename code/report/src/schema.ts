@@ -48,6 +48,10 @@ export const Milestone = z.object({
   title: z.string(),
   status: z.enum(["met", "unmet", "unknown"]),
   evidence: z.string(),
+  // The rung this milestone gates, so a reader can tell at a glance which
+  // rung an unmet row is holding up. Null for the smoke test, which is a
+  // precondition of the whole ramp rather than a step on it.
+  level: z.number().int().min(1).max(5).nullable().default(null),
 });
 
 // One remediation action, ranked. The report's purpose is not to grade an
@@ -69,8 +73,12 @@ export const NextStep = z.object({
   how: z.array(z.string()),
   // Where to do the work, when the scan can name it.
   repos: z.array(z.string()),
-  // The level this step gates, or null for hygiene.
+  // The level this step gates, or null when no level owns it.
   blocks_level: z.number().int().min(0).max(5).nullable(),
+  // Which band the step belongs to, for grouping. `foundation` is the smoke
+  // test, which gates nothing and blocks everything; `level` steps carry a
+  // `blocks_level`; `hygiene` is baseline conformance no milestone owns.
+  group: z.enum(["foundation", "level", "hygiene"]).default("level"),
 });
 
 export const BaselineCheck = z.object({

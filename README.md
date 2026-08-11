@@ -119,13 +119,19 @@ definition; being able to assign work to an agent whose destiny you control
 is the capability everything else builds on.
 
 Every org report ends in a ranked **plan**, not a grade. `next_steps[]`
-lists what to do, in the order that reaches the next rung: the smoke test
-first when it is unmet, then each unmet requirement of the next level in
-requirement order, then the branch-protection backlog. Each step carries
-imperative instructions and the repositories to apply them to. Every
-instruction names a signal the scanner reads, so following one changes the
-next report — advice this tool cannot then measure is advice it has no
-business giving. `gaps[]` remains, unordered, for anything that parses it.
+lists what to do, ordered by the rung each step reaches: the smoke test
+first when it is unmet, then every rung still ahead — nearest first, in
+requirement order inside each rung — then the branch-protection backlog.
+Each step carries imperative instructions, the repositories to apply them
+to, and the `blocks_level` it clears, so the site can band the plan by rung
+and a reader can see the shape of the climb rather than one step of it.
+Every milestone carries its rung too, which makes the milestone list
+readable as a column: where the ✗ marks start is where the ramp stops.
+
+Every instruction names a signal the scanner reads, so following one
+changes the next report — advice this tool cannot then measure is advice it
+has no business giving. `gaps[]` remains, unordered, for anything that
+parses it.
 
 Each repository gets maturity-ramp placement (level 0–5), tree-derived
 signals (instruction files, `.agents/`, agent workflows), and a per-rule

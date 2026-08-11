@@ -63,11 +63,21 @@ h2 .identity {
 }
 .milestones li {
   display: grid;
-  grid-template-columns: 1.2rem 15rem 1fr;
+  grid-template-columns: 1.2rem 1.6rem 15rem 1fr;
   gap: 0 0.75rem;
   padding: 0.28rem 0;
   border-top: 1px solid var(--hairline);
   font-size: 0.82rem;
+}
+/* Which rung the row gates. Reading down this column tells you where the
+   ramp stops without reading a single evidence string. */
+.milestones .rung {
+  color: var(--faint);
+  font-size: 0.72rem;
+  text-align: right;
+}
+.milestones li.unmet .rung {
+  color: var(--dim);
 }
 .milestones .glyph {
   text-align: center;
@@ -86,10 +96,10 @@ h2 .identity {
 }
 @media (max-width: 720px) {
   .milestones li {
-    grid-template-columns: 1.2rem 1fr;
+    grid-template-columns: 1.2rem 1.6rem 1fr;
   }
   .milestones .dim {
-    grid-column: 2;
+    grid-column: 3;
   }
 }
 /* The remediation plan. Ranked, so the numbering carries meaning: step 1 is
@@ -111,16 +121,51 @@ h2 .identity {
   letter-spacing: 0.02em;
   font-weight: 400;
 }
-.plan > ol {
+/* One band per rung. The rung a step reaches is what a reader scans for, so
+   it gets the heading; the rank stays on the list marker, which keeps the
+   numbering continuous down the page and the priority order readable. */
+.plan .band {
+  border-left: 1px solid var(--hairline);
+  padding: 0 0 0 1rem;
+  margin: 0 0 1.1rem;
+}
+.plan .band.reach,
+.plan .band.foundation {
+  border-left-color: var(--signal);
+}
+.plan .band.hygiene {
+  opacity: 0.75;
+}
+.plan .band h4 {
+  font: 500 0.74rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  margin: 0 0 0.7rem;
+}
+.plan .band.reach h4,
+.plan .band.foundation h4 {
+  color: var(--text);
+}
+.plan .band h4 .badge {
+  margin-left: 0.6em;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  text-transform: none;
+}
+.plan ol {
   margin: 0;
   padding-left: 1.6rem;
 }
-.plan > ol > li {
+.plan .band > ol > li {
   margin-bottom: 1.3rem;
 }
-.plan > ol > li::marker {
+.plan .band > ol > li::marker {
   color: var(--signal);
   font-weight: 600;
+}
+.plan .band.hygiene > ol > li::marker {
+  color: var(--faint);
 }
 .plan .step-title {
   font-weight: 500;
