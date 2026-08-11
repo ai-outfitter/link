@@ -1,0 +1,70 @@
+name: Something is broken
+description: >-
+  A scan reports something that is not true, or a command does not behave as
+  documented. The triage agent will label it and comment with a suggested plan.
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it break?
+      options:
+        - A repository is scored wrongly
+        - A signal is missed or falsely detected
+        - An evidence-gate backend reports the wrong finding
+        - The baseline audit reports the wrong status
+        - The remediation names a signal the scan does not read
+        - Source resolution (org, repo, or local folder)
+        - The site (report, workflows, or baseline page)
+        - The container image
+        - Documentation is wrong or out of date
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: e.g. npx @ai-outfitter/link@1 report my-org
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The released version, or "from source" plus the commit.
+      placeholder: e.g. 1.4.0
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source type
+      description: >-
+        A local folder never queries a forge, so branch rules and bypass lists
+        are unknown rather than absent. Say which you scanned.
+      options:
+        - GitHub organization
+        - A single GitHub repository
+        - A local folder
+        - A mix
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should it report?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What does it report instead?
+      description: >-
+        Paste the relevant part of `report.json` — the repo's `signals`,
+        `baseline`, or `evidence_gate` entry. Redact private repository names
+        if you need to.
+      render: json
+    validations:
+      required: true
