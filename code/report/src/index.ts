@@ -167,6 +167,10 @@ const AGENT_WORKFLOW_EXCLUDE = /setup|publish|deploy|build|image|release/i;
 const isAgentWorkflow = (p: string) =>
   (AGENT_WORKFLOW_HINT.test(p) || (REVIEW_WORKFLOW.test(p) && REVIEW_QUALIFIER.test(p))) &&
   !AGENT_WORKFLOW_EXCLUDE.test(p);
+// `config.yml` configures the template chooser; it is not itself a template.
+const ISSUE_TEMPLATE = /^\.github\/ISSUE_TEMPLATE\/(?!config\.ya?ml$).+\.(ya?ml|md)$/i;
+// GitHub reads CODEOWNERS from any of three locations.
+const CODEOWNERS = /^(|\.github\/|docs\/)CODEOWNERS$/;
 const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|nix|sh|bash|sql|proto|astro|vue|svelte)$/;
 // GitHub and Forgejo/Gitea CI both count.
 const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
@@ -209,6 +213,8 @@ function classifySignals(
     resident_deploy:
       (catalog || dotagentsTree) && paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
     deploy_manifests: paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
+    issue_templates: paths.filter((p) => ISSUE_TEMPLATE.test(p)).length,
+    codeowners: paths.some((p) => CODEOWNERS.test(p)),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
     evidence_gate: evidenceGate,
   });

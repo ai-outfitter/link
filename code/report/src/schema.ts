@@ -78,6 +78,15 @@ export const Signals = z.object({
   // deploy/ manifests alone; residency also counts when the org keeps its
   // catalog in a sibling repo (the catalog-apart-from-deployment shape).
   deploy_manifests: z.boolean(),
+  // Prerequisites for the two jobs the on-ramp recommends, not rungs on the
+  // ramp. An issue template makes the issue body a typed form, so a triage
+  // agent reads fields rather than guessing at prose; CODEOWNERS is already
+  // wired into the forge's review-request path, so a review agent augments
+  // routing that exists rather than inventing its own. Neither is a level
+  // requirement — the canonical ramp asks for neither, and scoring them as one
+  // would mark organizations down for something nobody required of them.
+  issue_templates: z.number().int().min(0).default(0),
+  codeowners: z.boolean().default(false),
   docs: z.enum(["none", "thin", "adequate"]),
   // Whether an evidence gate is wired on the branch agents land on. Whether
   // it ever fired is a sink question this scan cannot answer — see

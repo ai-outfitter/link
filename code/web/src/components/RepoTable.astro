@@ -9,7 +9,7 @@ const no = "—";
     <tr>
       <th>repo</th>
       <th>level</th>
-      <th title="AGENTS.md · CONTRIBUTING.md · DESIGN.md">docs A·C·D</th>
+      <th title="AGENTS.md · CONTRIBUTING.md · DESIGN.md · issue templates · CODEOWNERS">files A·C·D·T·O</th>
       <th>.agents/</th>
       <th>agent workflows</th>
       <th>baseline</th>
@@ -45,6 +45,25 @@ const no = "—";
           </span>
           <span class:list={[{ dimmed: !repo.signals.contributing_md }]} title="CONTRIBUTING.md">C</span>
           <span class:list={[{ dimmed: !repo.signals.design_md }]} title="DESIGN.md">D</span>
+          {/* Prerequisites for the two recommended jobs, not ramp requirements:
+              a dimmed T or O is context for a triage or review agent, never a
+              mark against the repository. */}
+          <span
+            class:list={[{ dimmed: !repo.signals.issue_templates }]}
+            title={
+              repo.signals.issue_templates
+                ? `${repo.signals.issue_templates} issue template(s) — a triage agent reads typed fields, not prose`
+                : "no issue templates; a triage agent has only prose to work from"
+            }
+          >T</span>
+          <span
+            class:list={[{ dimmed: !repo.signals.codeowners }]}
+            title={
+              repo.signals.codeowners
+                ? "CODEOWNERS — a review agent can respect routing the forge already applies"
+                : "no CODEOWNERS; review routing is not encoded in the repository"
+            }
+          >O</span>
         </td>
         <td>{repo.signals.dotagents_tree ? yes : no}</td>
         <td>
