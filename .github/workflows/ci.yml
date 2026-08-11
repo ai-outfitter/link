@@ -37,6 +37,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The evidence-gate backends decide a milestone that was a hardcoded
+      # literal before. These fixtures fail if following the remediation
+      # instructions stops changing the report, which is the one property
+      # that makes the advice worth giving.
+      - name: Evidence backend fixtures
+        run: npm run test:evidence
+
       # Install the tarball the way a consumer does, so a missing entry in
       # `files` (the catalog payload especially) fails here and not on npx.
       # `npm pack` runs prepack, which builds the site, so this also proves

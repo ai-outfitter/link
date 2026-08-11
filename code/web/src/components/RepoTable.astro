@@ -67,6 +67,20 @@ const no = "—";
               {check.rule}: {check.status}
             </span>
           ))}
+          {/* Guarded: a report written before evidence backends existed has
+              no `evidence_gate` at all. */}
+          {repo.signals.evidence_gate && (
+            <span
+              class="badge"
+              class:list={[repo.signals.evidence_gate.status === "met" ? "pass" : ""]}
+              title={repo.signals.evidence_gate.evidence}
+            >
+              {repo.signals.evidence_gate.backend}:{" "}
+              {repo.signals.evidence_gate.declared_only
+                ? "declared only"
+                : repo.signals.evidence_gate.status}
+            </span>
+          )}
         </td>
       </tr>
     ))}

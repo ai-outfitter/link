@@ -20,6 +20,18 @@
   signal the scanner reads — advice the tool cannot then measure tells an
   organization to do work the next report will not credit. When a check
   changes, its remediation text changes with it.
+- Evidence gates are backends, and the boundary is *wired, never fired*. A
+  required status check is a control this scan can see; whether an evidence
+  record was ever written needs a sink credential and belongs to
+  `pensieve verify`. Never add a backend that reaches a network service — a
+  backend reads the tree and the effective branch rules, both already fetched.
+  Keep the registry plural: `link` audits organizations it does not own, and a
+  scanner that recognizes only our own evidence system grades strangers on
+  whether they adopted our product.
+- A check whose status is a literal is a bug, not a placeholder. `session-capture`
+  was hardcoded `unmet` for months, so a reader who did the work exactly as the
+  runbook said was still told they failed. `scripts/test-evidence.mjs` exists to
+  make that regression fail loudly.
 - Record absence of evidence as absence, never as a negative fact. A forge
   scan cannot see local-only practice; `evidence_limits` bounds every claim
   the report makes.

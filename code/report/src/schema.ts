@@ -9,6 +9,21 @@ export const LEVEL_NAMES = [
   "self-improving",
 ] as const;
 
+// What an evidence-gate backend found for one repository. Null when no
+// backend recognized anything: absence, recorded as absence.
+export const EvidenceFinding = z.object({
+  backend: z.string(),
+  backend_name: z.string(),
+  status: z.enum(["met", "unmet", "unknown"]),
+  // The gate exists in the tree and no effective rule requires it. A workflow
+  // a branch can add or omit is not a control (CICD-001.1.2), so this reads
+  // as unmet however complete the files are.
+  declared_only: z.boolean(),
+  tiers: z.array(z.string()),
+  evidence: z.string(),
+  docs: z.string(),
+});
+
 export const Signals = z.object({
   agents_md: z.boolean(),
   claude_md: z.boolean(),
@@ -39,6 +54,10 @@ export const Signals = z.object({
   // catalog in a sibling repo (the catalog-apart-from-deployment shape).
   deploy_manifests: z.boolean(),
   docs: z.enum(["none", "thin", "adequate"]),
+  // Whether an evidence gate is wired on the branch agents land on. Whether
+  // it ever fired is a sink question this scan cannot answer — see
+  // evidence.ts for that boundary.
+  evidence_gate: EvidenceFinding.nullable().default(null),
 });
 
 export const Role = z.enum(["catalog", "application", "meta"]);
@@ -158,6 +177,13 @@ export const Report = z.object({
     // unmeasured rule read as a passing one is a false clean bill.
     audited_rules: z.array(z.string()).default([]),
   }),
+  // The evidence-gate backends this scan looked for. A reader who sees
+  // `session-capture` unmet is owed the list of shapes that would have
+  // satisfied it, so an organization running its own system can tell whether
+  // it was looked for or merely not recognized.
+  evidence_backends: z
+    .array(z.object({ id: z.string(), name: z.string(), docs: z.string() }))
+    .default([]),
   orgs: z.array(OrgReport),
   evidence_limits: z.array(z.string()),
 });
@@ -169,6 +195,7 @@ export type OrgReport = z.infer<typeof OrgReport>;
 export type RepoReport = z.infer<typeof RepoReport>;
 export type Signals = z.infer<typeof Signals>;
 export type BaselineCheck = z.infer<typeof BaselineCheck>;
+export type EvidenceFinding = z.infer<typeof EvidenceFinding>;
 export type NextStep = z.infer<typeof NextStep>;
 
 // Loose view of an agent-workflow/v1 document, for the web's workflow pages.

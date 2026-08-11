@@ -106,6 +106,34 @@ const isMap = (value: unknown): value is Record<string, unknown> =>
         </section>
       ))}
 
+      {(report?.evidence_backends ?? []).length > 0 && (
+        <section class="card">
+          <h2 style="margin-top:0">Evidence gate backends</h2>
+          <p class="dim">
+            <code>evidence.landing-gate</code> is satisfied by any of these. The scan
+            reads whether a gate is <em>wired</em> — a status check that an effective
+            branch rule requires — never whether it ever fired: that needs a
+            credential for the evidence store, and this scan holds none.
+          </p>
+          <table>
+            <tbody>
+              {report.evidence_backends.map((backend: any) => (
+                <tr>
+                  <th><code>{backend.id}</code></th>
+                  <td>
+                    {backend.docs ? (
+                      <a href={backend.docs} rel="noreferrer">{backend.name}</a>
+                    ) : (
+                      backend.name
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {baseline.raw && (
         <details>
           <summary>yaml source</summary>

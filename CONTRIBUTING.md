@@ -162,9 +162,30 @@ rather than a guarantee.
 ```sh
 npm run typecheck
 npm run build
+npm run test:evidence                          # evidence-backend fixtures
 npm pack                                       # inspect the tarball contents
 docker build -t link:dev .
 ```
+
+### Adding an evidence-gate backend
+
+`code/report/src/evidence.ts` holds the registry. A backend takes the
+repository tree and the effective branch rules — both already fetched — and
+returns a finding, or `null` when nothing of its shape is present. Three rules:
+
+- **`met` comes from a required check, never from a file.** A workflow or a
+  `rulesets/*.json` in the tree is an import source; the effective branch rules
+  are the only proof that a check is required. A gate the branch can omit is
+  not a gate.
+- **Unreadable rules are `unknown`, not `unmet`.** A gate that cannot be seen
+  has not been shown to be missing.
+- **No network.** Verifying that evidence records exist needs a store
+  credential and belongs to `pensieve verify`. This scan reports whether the
+  gate is wired, never whether it fired.
+
+Add fixtures to `scripts/test-evidence.mjs` in the same change. That file
+exists because `session-capture` was a hardcoded `unmet` for months, which
+told everyone who did the work correctly that they had failed.
 
 CI runs the same steps on every pull request, plus a consumer check: it
 installs the packed tarball into a clean directory, runs the binary from it,

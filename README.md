@@ -133,6 +133,34 @@ changes the next report — advice this tool cannot then measure is advice it
 has no business giving. `gaps[]` remains, unordered, for anything that
 parses it.
 
+### Evidence gates
+
+`session-capture` and the `evidence.landing-gate` baseline rule are decided by
+**evidence-gate backends** — a small registry in `code/report/src/evidence.ts`,
+every one of them reading the repository tree and the effective branch rules
+the scan already fetched. No backend adds a network call.
+
+| Backend | Recognizes |
+| --- | --- |
+| `pensieve` | The [CICD-001](https://github.com/ai-outfitter/pensieve/blob/main/docs/requirements/CICD-001-evidence-gates.md) shape: a required status check under `evidence/`, the tier workflows, and `.github/pensieve.yml` |
+| `generic` | A required check named for evidence, a transcript, session capture, or an audit — for an organization that built its own |
+
+Backends are plural on purpose. `link` audits organizations it does not own, so
+a scanner that recognized only ai-outfitter's own evidence system would be
+grading strangers on whether they adopted our product and calling the result a
+maturity level.
+
+Two boundaries hold the design honest:
+
+- **Wired, never fired.** A required status check is the control; whether any
+  evidence record was ever written is a question for `pensieve verify` and the
+  CI gate, which authenticate to a store with a workload identity. A read-only
+  forge scan holds no such credential and does not pretend to.
+- **A gate the branch can omit is not a gate.** A repository carrying every
+  workflow and policy file that no effective rule requires is reported
+  `declared only` and counts as unmet — [CICD-001.1.2](https://github.com/ai-outfitter/pensieve/blob/main/docs/requirements/CICD-001-evidence-gates.md).
+  In-tree `rulesets/*.json` are import sources, not active rules.
+
 Each repository gets maturity-ramp placement (level 0–5), tree-derived
 signals (instruction files, `.agents/`, agent workflows), and a per-rule
 audit against `governance/sdlc-baseline.yaml`. Output is typed JSON

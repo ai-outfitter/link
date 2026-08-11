@@ -22,7 +22,15 @@ import { join, resolve, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import {
+  defaultEvidenceBackend,
+  detectEvidenceGate,
+  EVIDENCE_BACKENDS,
+  evidenceBackendById,
+  requiredCheckContexts,
+} from "./evidence.js";
+import {
   BaselineCheck,
+  EvidenceFinding,
   LEVEL_NAMES,
   Milestone,
   NextStep,
@@ -140,7 +148,11 @@ const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|n
 // GitHub and Forgejo/Gitea CI both count.
 const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
 
-function classifySignals(paths: string[], agentsMdBody: string | null): Signals {
+function classifySignals(
+  paths: string[],
+  agentsMdBody: string | null,
+  evidenceGate: EvidenceFinding | null,
+): Signals {
   const has = (p: string) => paths.includes(p);
   const ciWorkflows = paths.filter((p) => CI_DIR.test(p) && /\.ya?ml$/.test(p));
   const docCount = paths.filter((p) => p.startsWith("docs/") && p.endsWith(".md")).length;
@@ -177,6 +189,7 @@ function classifySignals(paths: string[], agentsMdBody: string | null): Signals 
       (catalog || dotagentsTree) && paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
     deploy_manifests: paths.some((p) => /^deploy\/.*\.ya?ml$/.test(p)),
     docs: docCount >= 5 ? "adequate" : docCount >= 1 || has("README.md") ? "thin" : "none",
+    evidence_gate: evidenceGate,
   });
 }
 
@@ -211,12 +224,21 @@ function auditBaseline(signals: Signals, input: RepoInput): BaselineCheck[] {
   // The landing gate applies only to workflows that land changes; triage
   // never merges code. agent-identities and teams.reviewers are org-level
   // facts and are reported once per org, not per repo.
+  //
+  // The verdict comes from the evidence-gate backends, so this check and the
+  // `session-capture` milestone are two views of one measurement and cannot
+  // disagree. It was a hardcoded "fail" before: unconditional, so no amount
+  // of correct work could clear it.
   const changeLanding = signals.agent_workflows.filter((w) => !/triage/i.test(w));
   if (changeLanding.length > 0 || signals.copilot_agent) {
+    const gate = signals.evidence_gate;
     checks.push({
       rule: "evidence.landing-gate",
-      status: "fail",
-      note: "change-landing agent automation present but no session-capture landing gate found",
+      status: gate === null ? "fail" : gate.status === "met" ? "pass" : gate.status === "unknown" ? "unknown" : "fail",
+      note:
+        gate === null
+          ? "change-landing agent automation present and no evidence gate found by any backend"
+          : `${gate.backend}: ${gate.evidence}`,
     });
   }
   return checks;
@@ -234,7 +256,12 @@ function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
 }
 
 function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
-  const signals = classifySignals(input.paths, input.agentsMdBody);
+  const evidenceGate = detectEvidenceGate({
+    paths: input.paths,
+    requiredChecks: requiredCheckContexts(input.branchRules),
+    hasBranchRules: input.branchRules !== null,
+  });
+  const signals = classifySignals(input.paths, input.agentsMdBody, evidenceGate);
   const baseline = auditBaseline(signals, input);
   const level = maturityLevel(signals, baseline);
   return RepoReport.parse({
@@ -348,13 +375,21 @@ const REMEDIATION: Record<
       ],
     },
   },
+  // Filled from the evidence backend that matched, or from the default
+  // backend when none did — see `remediationPlan`. These entries are the
+  // fallback for a report with no change-landing automation at all.
   "session-capture": {
-    title: "Capture the agent session before the change lands",
-    how: [
-      "Make each agent workflow upload its session transcript as a run artifact.",
-      "Add a required status check that fails when the artifact is missing.",
-      "This milestone stays unmet until the gate exists. A forge tree cannot see a transcript that nothing uploads.",
-    ],
+    title: "Require an evidence check on the branch agents land on",
+    how: defaultEvidenceBackend().remediation.how,
+    empty: {
+      title: "Let an agent land a change, then gate what it lands",
+      how: [
+        "No agent workflow lands code yet, so there is nothing for an evidence gate to cover.",
+        "Extend one agent workflow so that it opens a pull request.",
+        "Then install the gate: copy `evidence-pr.yml` and `.github/pensieve.yml` from the Pensieve reference repository, and import a ruleset that requires a status check whose context starts with `evidence/`.",
+        "The required check is what the scan reads. Gate files that no rule requires are reported as declared only.",
+      ],
+    },
   },
   "bot-identity": {
     title: "Give the agents a capped bot identity",
@@ -501,13 +536,37 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
             ? `all ${changeLanding.length} change-landing repos pass branch protection`
             : `unprotected: ${names(unprotectedLanding)}`,
     },
-    {
-      id: "session-capture",
-      title: "session capture before landing",
-      status: "unmet",
-      evidence:
-        "no session-capture landing gate detected; becomes scannable once workflows upload session artifacts behind a required check",
-    },
+    // Measured over exactly the repos the `evidence.landing-gate` baseline
+    // check covers, so the milestone and the rule are two views of one
+    // measurement. `link` reads whether the gate is wired, never whether it
+    // fired — that needs a sink credential, and it is `pensieve verify`'s job.
+    (() => {
+      const gated = changeLanding.map((r) => ({ repo: r, gate: r.signals.evidence_gate }));
+      const met = gated.filter((g) => g.gate?.status === "met");
+      const unknown = gated.filter((g) => g.gate?.status === "unknown");
+      const declaredOnly = gated.filter((g) => g.gate?.declared_only);
+      const backends = [...new Set(met.map((g) => g.gate!.backend))];
+      return {
+        id: "session-capture",
+        title: "session capture before landing",
+        status:
+          changeLanding.length === 0
+            ? "unmet"
+            : met.length === changeLanding.length
+              ? "met"
+              : unknown.length > 0 && met.length + unknown.length === changeLanding.length
+                ? "unknown"
+                : "unmet",
+        evidence:
+          changeLanding.length === 0
+            ? "no change-landing agent automation exists yet, so there is nothing to gate (triage does not land code)"
+            : met.length === changeLanding.length
+              ? `all ${changeLanding.length} change-landing repos require an evidence check (${backends.join(", ")})`
+              : declaredOnly.length > 0
+                ? `${declaredOnly.length} of ${changeLanding.length} change-landing repos carry evidence gate files that no effective rule requires — a workflow a branch can add or omit is not a gate: ${names(declaredOnly.map((g) => g.repo))}`
+                : `${changeLanding.length - met.length} of ${changeLanding.length} change-landing repos have no evidence gate: ${names(gated.filter((g) => g.gate?.status !== "met").map((g) => g.repo))}`,
+      };
+    })(),
     {
       id: "bot-identity",
       title: "capped agent identity (bot app)",
@@ -551,7 +610,17 @@ function remediationPlan(
             !r.baseline.some((c) => c.rule === "branch-protection" && c.status === "pass"),
         ),
       ),
-    "session-capture": () => names(ranked.filter((r) => r.signals.agent_workflows.length > 0)),
+    // The same population the milestone and the baseline rule measure: repos
+    // whose automation lands changes, minus those already gated.
+    "session-capture": () =>
+      names(
+        ranked.filter(
+          (r) =>
+            (r.signals.agent_workflows.some((w) => !/triage/i.test(w)) ||
+              r.signals.copilot_agent) &&
+            r.signals.evidence_gate?.status !== "met",
+        ),
+      ),
     "branch-protection-backlog": () => names(failingProtection),
   };
 
@@ -565,7 +634,16 @@ function remediationPlan(
     const remedy = REMEDIATION[id];
     if (!remedy) return;
     const repos = targets[id]?.() ?? [];
-    const variant = repos.length === 0 && remedy.empty ? remedy.empty : remedy;
+    let variant = repos.length === 0 && remedy.empty ? remedy.empty : remedy;
+    // An organization that already started on an evidence backend gets that
+    // backend's instructions, not the default one's. Telling somebody
+    // half-way through a Pensieve adoption to start a different system is
+    // advice that costs them the work they already did.
+    if (id === "session-capture" && repos.length > 0) {
+      const started = ranked.find((r) => r.signals.evidence_gate !== null)?.signals.evidence_gate;
+      const backend = started ? evidenceBackendById(started.backend) : defaultEvidenceBackend();
+      if (backend) variant = backend.remediation;
+    }
     steps.push({
       rank: steps.length + 1,
       milestone: id === "branch-protection-backlog" ? "" : id,
@@ -1074,6 +1152,7 @@ export async function runReport(argv: string[]): Promise<number> {
       raw: baselineRaw,
       audited_rules: AUDITED_RULES,
     },
+    evidence_backends: EVIDENCE_BACKENDS.map((b) => ({ id: b.id, name: b.name, docs: b.docs })),
     orgs,
     evidence_limits: evidenceLimits,
   });

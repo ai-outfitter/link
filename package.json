@@ -40,7 +40,8 @@
     "prepare": "npm run build",
     "prepack": "npm run build && npm run build:web",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "report": "node dist/cli.js report"
+    "report": "node dist/cli.js report",
+    "test:evidence": "node scripts/test-evidence.mjs"
   },
   "dependencies": {
     "yaml": "^2.8.1",
