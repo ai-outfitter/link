@@ -130,6 +130,39 @@ if (!generic.evidence.includes("session-capture/verify")) {
   console.log("ok   generic backend names the matched context");
 }
 
+// A dependency scanner is not a session record. Bare `audit` used to match, so
+// `bundle-audit.yml` was reported as a declared-only evidence gate in a real
+// organization that had never built one.
+check(
+  "a dependency-audit workflow is not an evidence gate",
+  detect({
+    paths: [".github/workflows/bundle-audit.yml"],
+    requiredChecks: ["ci"],
+    hasBranchRules: true,
+  }),
+  null,
+);
+for (const name of ["npm-audit", "cargo-audit", "pip-audit", "security-audit"]) {
+  check(
+    `${name} is not an evidence gate`,
+    detect({
+      paths: [`.github/workflows/${name}.yml`],
+      requiredChecks: [name],
+      hasBranchRules: true,
+    }),
+    null,
+  );
+}
+
+// The spelled-out forms still match, so an organization that genuinely runs an
+// audit trail keeps its gate.
+const auditLog = detect({
+  paths: [".github/workflows/audit-log.yml"],
+  requiredChecks: ["audit-log/verify"],
+  hasBranchRules: true,
+});
+check("an audit-log check is still matched", [auditLog.backend, auditLog.status], ["generic", "met"]);
+
 // Pensieve wins when both match: its shape is specified, the other inferred.
 const both = detect({
   paths: [...PENSIEVE_TREE, ".github/workflows/audit-trail.yml"],

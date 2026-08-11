@@ -244,8 +244,13 @@ const pensieve: EvidenceBackend = {
 // Pensieve. Weaker by construction: it recognizes a naming convention rather
 // than a specified shape, so it names the context it matched — a false
 // positive a reader can see is one a reader can correct.
-const GENERIC_CHECK = /(^|[-_/ ])(evidence|transcript|session-capture|audit)([-_/ ]|$)/i;
-const GENERIC_WORKFLOW = /(evidence|transcript|session-capture|audit)/i;
+// `audit` is spelled out as `audit-trail` / `audit-log` rather than left bare.
+// Bare `audit` matched `bundle-audit.yml` — a Ruby dependency scanner — and
+// would equally match `npm-audit`, `cargo-audit`, and `security-audit`. A
+// dependency scan is not a session record, and a backend that claims one as
+// evidence reports a gate the organization never built.
+const GENERIC_CHECK = /(^|[-_/ ])(evidence|transcript|session-capture|audit-trail|audit-log)([-_/ ]|$)/i;
+const GENERIC_WORKFLOW = /(evidence|transcript|session-capture|audit-trail|audit-log)/i;
 
 const generic: EvidenceBackend = {
   id: "generic",
@@ -266,7 +271,7 @@ const generic: EvidenceBackend = {
     how: [
       "Make the workflow that captures agent sessions report a status check.",
       "Require that check on the default branch through a ruleset or branch protection.",
-      "Name the check so the convention is legible — a context containing `evidence`, `transcript`, `session-capture`, or `audit`. The scan matches the required check by name.",
+      "Name the check so the convention is legible — a context containing `evidence`, `transcript`, `session-capture`, `audit-trail`, or `audit-log`. The scan matches the required check by name; bare `audit` is not matched, because a dependency audit is not a session record.",
       "Block direct pushes to the default branch, or a commit lands without passing the check at all.",
       "Give no actor an unconditional ruleset bypass.",
       "Prefer the Pensieve gate shape if you have no evidence system yet: it is specified rather than inferred, and this backend recognizes a naming convention only.",
