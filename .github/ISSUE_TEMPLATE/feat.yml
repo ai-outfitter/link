@@ -1,0 +1,64 @@
+name: New capability or change
+description: >-
+  Request a new signal, backend, milestone, or a change to an existing one. The
+  triage agent will label it and comment with a suggested plan.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: What does this touch?
+      options:
+        - A new tree signal
+        - An evidence-gate backend
+        - Milestones and the maturity ramp
+        - The remediation plan
+        - The governance baseline
+        - Source resolution (org, repo, or local folder)
+        - The site (report, workflows, or baseline page)
+        - CLI or container
+        - Documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What can you not see today?
+      description: >-
+        The question your report cannot answer, not the solution you have in
+        mind. A request stated as a problem survives a better idea than yours.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should it do?
+    validations:
+      required: true
+  - type: input
+    id: signal
+    attributes:
+      label: What would the scan read?
+      description: >-
+        The file, path, or forge field that decides the answer. Every
+        instruction this tool gives names a signal it reads, so a change that
+        cannot be measured is a change it cannot advise on.
+      placeholder: e.g. .github/CODEOWNERS, or the required_status_checks rule
+    validations:
+      required: true
+  - type: dropdown
+    id: scoring
+    attributes:
+      label: Should this affect a repository's level?
+      description: >-
+        The ramp is defined in `outfitter/docs/philosophy.md`. A signal can be
+        read and surfaced without becoming a rung, and most should be — scoring
+        something the ramp never asked for marks organizations down for it.
+      options:
+        - "No — read and surface it, but do not score it"
+        - "Yes — it belongs on the ramp"
+        - Not sure
+    validations:
+      required: true
