@@ -241,14 +241,24 @@ function auditBaseline(signals: Signals, input: RepoInput): BaselineCheck[] {
   const changeLanding = signals.agent_workflows.filter((w) => !/triage/i.test(w));
   if (changeLanding.length > 0 || signals.copilot_agent) {
     const gate = signals.evidence_gate;
-    checks.push({
-      rule: "evidence.landing-gate",
-      status: gate === null ? "fail" : gate.status === "met" ? "pass" : gate.status === "unknown" ? "unknown" : "fail",
-      note:
-        gate === null
-          ? "change-landing agent automation present and no evidence gate found by any backend"
-          : `${gate.backend}: ${gate.evidence}`,
-    });
+    // Branch rules are what makes a gate provable, so when they cannot be read
+    // this check is unknown for the same reason `branch-protection` is — no
+    // forge was queried. Reporting `fail` here would record the absence of a
+    // measurement as a negative fact about the repository, and it would make
+    // the two checks disagree about the same missing evidence.
+    if (input.branchRules === null) {
+      checks.push({ rule: "evidence.landing-gate", status: "unknown", note: input.rulesNote });
+    } else {
+      checks.push({
+        rule: "evidence.landing-gate",
+        status:
+          gate === null ? "fail" : gate.status === "met" ? "pass" : gate.status === "unknown" ? "unknown" : "fail",
+        note:
+          gate === null
+            ? "change-landing agent automation present and no evidence gate found by any backend"
+            : `${gate.backend}: ${gate.evidence}`,
+      });
+    }
   }
   return checks;
 }
