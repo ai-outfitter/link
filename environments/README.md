@@ -20,6 +20,32 @@ copy against the template — review, not resolution.
 | [`kube/`](kube/) | In-cluster runs; binaries over stdio, secrets from the pod |
 | [`kube-api/`](kube-api/) | In-cluster runs that also read the Kubernetes API through the agent-operator's ServiceAccount |
 
+## Which one to start with
+
+**Choose per job, not per organization.** Put a job where its trigger and its
+credential already live.
+
+Start with `github-actions`, and stay there for **issue triage** and
+**pull-request review** — the two jobs worth automating first. Their trigger is
+a forge event the platform already delivers (`on: issues`, `on: pull_request`),
+and their credential is the job's own `GITHUB_TOKEN`, scoped by a `permissions:`
+block and expired when the job ends. There is no standing secret to rotate and
+nothing to receive the webhook.
+
+**This holds when you already run a cluster.** A cluster buys persistence
+between runs, runtimes longer than a job, and scope across repositories.
+Triaging one issue and reviewing one pull request are stateless, short, and
+scoped to one repository, so the cluster's premium buys nothing for them while
+still costing a webhook receiver, an ingress, and a long-lived credential.
+Running these two in Actions is not a limitation you accept; it is cost you do
+not pay.
+
+Reach for `kube` or `kube-api` when a job needs what a workflow cannot give it:
+an agent that is assignable and picks work up itself, memory between runs, work
+spanning several repositories, or a run longer than a job allows. `kube-api`
+additionally reads the Kubernetes API, so choose it only when the agent's task
+is about the cluster.
+
 Two rules keep a copied environment honest:
 
 - **An environment binds and restricts; it must not widen.** Deny rules and

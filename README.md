@@ -143,7 +143,7 @@ the scan already fetched. No backend adds a network call.
 | Backend | Recognizes |
 | --- | --- |
 | `pensieve` | The [CICD-001](https://github.com/ai-outfitter/pensieve/blob/main/docs/requirements/CICD-001-evidence-gates.md) shape: a required status check under `evidence/`, the tier workflows, and `.github/pensieve.yml` |
-| `generic` | A required check named for evidence, a transcript, session capture, or an audit — for an organization that built its own |
+| `generic` | A required check named for evidence, a transcript, session capture, an audit trail, or an audit log — for an organization that built its own. Bare `audit` is not matched: a dependency audit is not a session record |
 
 Backends are plural on purpose. `link` audits organizations it does not own, so
 a scanner that recognized only ai-outfitter's own evidence system would be

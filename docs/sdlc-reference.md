@@ -134,6 +134,17 @@ layer precedence lets a deployment layer shadow a catalog agent wholesale,
 so governance should pin which layer the `sdlc-*` agents resolve from, the
 same way a project layer must not weaken org policy.
 
+**The spec treats these as peers; the on-ramp does not.** A `runs-on:` that
+selects an execution backend is deliberately indifferent between them — that
+indifference is the point, and it is what lets the same step run on a laptop, a
+runner, and a pod. Recommending one is a separate question, answered per job
+rather than per organization: put a job where its trigger and its credential
+already live. For issue triage and pull-request review that is `github-actions`,
+and it stays `github-actions` for an organization that already runs a cluster,
+because those two jobs are stateless, short, and scoped to one repository.
+[`environments/README.md`](../environments/README.md) states the rule and its
+boundary; `link report` gives the same advice in the plan it ranks.
+
 ## The governance policy
 
 `git-forge-governance/v1` declares what must be true of a repository for
