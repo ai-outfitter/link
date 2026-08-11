@@ -148,11 +148,25 @@ type RepoInput = {
   sample: MergedPr[] | null;
 };
 
-const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot|review-bot/i;
+const AGENT_WORKFLOW_HINT = /agent|claude|outfitter|triage|copilot/i;
+// Adversarial review is part of rung 3 in the canonical ramp, but the only
+// spelling that used to score was the literal `review-bot`, so following the
+// ramp with an obviously-named file earned nothing.
+//
+// A review workflow counts when its name says *whose* review it is —
+// `pr-review`, `code-review`, `review-undrafted-pr`, `scheduled-commit-review`.
+// A bare `review.yml` is ordinary CI: a nixpkgs fork ships one, and counting it
+// would claim a self-hosted agent the repository does not have. `preview.yml`
+// is excluded by the leading boundary rather than by the qualifier.
+const REVIEW_WORKFLOW = /(^|[-_./])review/i;
+const REVIEW_QUALIFIER = /(^|[-_./])(pr|pull-request|code|commit|agent|bot)([-_./]|$)/i;
 // Build/publish/setup workflows that merely mention agents are not agent
 // workflows: publish-agent-image builds an image, copilot-setup-steps
 // configures an environment.
 const AGENT_WORKFLOW_EXCLUDE = /setup|publish|deploy|build|image|release/i;
+const isAgentWorkflow = (p: string) =>
+  (AGENT_WORKFLOW_HINT.test(p) || (REVIEW_WORKFLOW.test(p) && REVIEW_QUALIFIER.test(p))) &&
+  !AGENT_WORKFLOW_EXCLUDE.test(p);
 const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|nix|sh|bash|sql|proto|astro|vue|svelte)$/;
 // GitHub and Forgejo/Gitea CI both count.
 const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
@@ -187,9 +201,7 @@ function classifySignals(
       agentsMdBody !== null && /CONTRIBUTING\.md/i.test(agentsMdBody),
     dotagents_tree: dotagentsTree,
     ci_workflows: ciWorkflows.length,
-    agent_workflows: ciWorkflows
-      .filter((p) => AGENT_WORKFLOW_HINT.test(p) && !AGENT_WORKFLOW_EXCLUDE.test(p))
-      .map((p) => p.replace(CI_DIR, "")),
+    agent_workflows: ciWorkflows.filter(isAgentWorkflow).map((p) => p.replace(CI_DIR, "")),
     catalog,
     declared_workflows: declaredWorkflows,
     governance: paths.some((p) => /^governance\/.+\.ya?ml$/.test(p)),
