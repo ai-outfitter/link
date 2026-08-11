@@ -375,13 +375,15 @@ const REMEDIATION: Record<
   { title: string; how: string[]; empty?: { title: string; how: string[] } }
 > = {
   "e2e-smoketest": {
-    title: "Give the organization one agent it hosts itself",
+    title: "Give the organization one agent it hosts itself — start with issue triage",
     how: [
-      "Add a CI workflow to one active repository. Put it in `.github/workflows/`, `.forgejo/workflows/`, or `.gitea/workflows/`.",
-      "Name the file for the agent, for example `agent-triage.yml`. The scan looks for `agent`, `claude`, `outfitter`, `triage`, or `review-bot` in the file name.",
+      "Start with issue triage in GitHub Actions. It is the cheapest agent to run: the trigger is `on: issues`, and the credential is the job's own `GITHUB_TOKEN`, which expires with the job.",
+      "Copy `examples/issue-triage-github-models.yml` from `ai-outfitter/actions`. It runs on GitHub Models, so it needs no API key.",
+      "Add issue templates at `.github/ISSUE_TEMPLATE/` first. A template makes the issue body a typed form, so the agent reads named fields instead of guessing at prose.",
+      "Put the workflow in `.github/workflows/`, `.forgejo/workflows/`, or `.gitea/workflows/`. Name it for the agent, for example `issue-triage.yml`.",
       "Do not use `setup`, `publish`, `deploy`, `build`, `image`, or `release` in the name. The scan reads those as infrastructure workflows.",
-      "Trigger the workflow from an issue event. Let it call a model and write one comment back.",
-      "As an alternative, deploy a resident agent: add `deploy/<agent>.yaml` beside a dotagents payload.",
+      "Choose GitHub Actions for this job even when the organization runs a Kubernetes cluster. A cluster buys persistence, long runtimes, and cross-repo scope; triage needs none of the three, and a resident agent must first receive the event through a webhook receiver you build and a standing credential you rotate.",
+      "As an alternative, deploy a resident agent: add `deploy/<agent>.yaml` beside a dotagents payload. That satisfies this milestone too.",
       "A SaaS coding agent does not satisfy this milestone. The capability being measured is an agent whose runtime the organization controls.",
     ],
   },
@@ -413,10 +415,14 @@ const REMEDIATION: Record<
     ],
   },
   "triggered-agents": {
-    title: "Trigger an agent from continuous integration",
+    title: "Trigger an agent from continuous integration — add pull-request review",
     how: [
-      "Add a CI workflow that runs an agent on an issue or pull request event.",
-      "Name the workflow file for the agent, and avoid `setup`, `publish`, `deploy`, `build`, `image`, and `release`.",
+      "Add pull-request review after issue triage. Copy `examples/review-undrafted-pr.yml` from `ai-outfitter/actions`; it runs when a pull request leaves draft, so the agent reads a change the author considers finished.",
+      "Add `CODEOWNERS` first. The forge already requests review from the owners it names, so the agent augments routing that fires today instead of inventing its own.",
+      "Name the workflow file so it says whose review it is — `pr-review.yml`, `code-review.yml`, or `review-undrafted-pr.yml`. A bare `review.yml` reads as ordinary CI and does not count.",
+      "Avoid `setup`, `publish`, `deploy`, `build`, `image`, and `release` in the name. The scan reads those as infrastructure workflows.",
+      "Keep the bot out of `CODEOWNERS`. Its approval must not satisfy a required review by itself.",
+      "Run this job in CI even when the organization runs a cluster. Reviewing one pull request is stateless, short, and scoped to one repository, so a cluster adds cost without adding capability.",
       "A resident agent also satisfies this milestone: `deploy/<agent>.yaml` beside a dotagents payload is the evidence. The rung asks for an agent triggered from CI or a cluster, and a cluster counts.",
       "A forge coding agent also satisfies this milestone. `copilot-setup-steps.yml` in the CI directory is the evidence, although it does not satisfy the smoke test.",
     ],
