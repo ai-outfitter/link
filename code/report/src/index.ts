@@ -249,13 +249,37 @@ function auditBaseline(signals: Signals, input: RepoInput): BaselineCheck[] {
     if (input.branchRules === null) {
       checks.push({ rule: "evidence.landing-gate", status: "unknown", note: input.rulesNote });
     } else {
+      // With no backend matched there is no finding to carry the facts the
+      // scan already fetched for this repository — and these are the repos
+      // where they matter most: an agent lands changes here. Report them
+      // rather than discarding them for want of somewhere to put them.
+      const facts: string[] = [];
+      if (directPushesBlocked(input.branchRules) === false)
+        facts.push(
+          "direct pushes to the default branch are not blocked, so a commit can land without passing any check (CICD-001.9.3)",
+        );
+      // Deduped: the same actor reaches a branch through every ruleset that
+      // grants it, and naming it once per ruleset reads as several exemptions
+      // where there is one.
+      const always = [
+        ...new Set(
+          (input.bypassActors ?? []).filter((a) => a.mode === "always").map((a) => a.who),
+        ),
+      ];
+      if (always.length > 0)
+        facts.push(
+          `${always.join(", ")} ${always.length === 1 ? "bypasses" : "bypass"} the ruleset unconditionally (CICD-001.7.4)`,
+        );
       checks.push({
         rule: "evidence.landing-gate",
         status:
           gate === null ? "fail" : gate.status === "met" ? "pass" : gate.status === "unknown" ? "unknown" : "fail",
         note:
           gate === null
-            ? "change-landing agent automation present and no evidence gate found by any backend"
+            ? [
+                "change-landing agent automation present and no evidence gate found by any backend",
+                ...facts,
+              ].join("; ")
             : `${gate.backend}: ${gate.evidence}`,
       });
     }
