@@ -399,6 +399,7 @@ const REMEDIATION: Record<
     how: [
       "Add a CI workflow that runs an agent on an issue or pull request event.",
       "Name the workflow file for the agent, and avoid `setup`, `publish`, `deploy`, `build`, `image`, and `release`.",
+      "A resident agent also satisfies this milestone: `deploy/<agent>.yaml` beside a dotagents payload is the evidence. The rung asks for an agent triggered from CI or a cluster, and a cluster counts.",
       "A forge coding agent also satisfies this milestone. `copilot-setup-steps.yml` in the CI directory is the evidence, although it does not satisfy the smoke test.",
     ],
   },
@@ -473,8 +474,18 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
   const consumers = ranked.filter(
     (r) => r.role === "application" && r.signals.dotagents_tree,
   );
+  // "an issue, a message, or a schedule triggers agents in CI **or a cluster**"
+  // — outfitter/docs/philosophy.md, the canonical ramp definition. A resident
+  // agent satisfies this rung, and excluding it meant an organization that ran
+  // its own agents in its own cluster capped at rung 2 while one that enabled a
+  // SaaS coding agent — which the smoke test refuses as someone else's destiny
+  // — climbed past it. The evidence bar is the same either way: a file in the
+  // tree, `copilot-setup-steps.yml` or `deploy/<agent>.yaml`.
   const triggered = ranked.filter(
-    (r) => r.signals.agent_workflows.length > 0 || r.signals.copilot_agent,
+    (r) =>
+      r.signals.agent_workflows.length > 0 ||
+      r.signals.copilot_agent ||
+      r.signals.resident_deploy,
   );
   const changeLanding = ranked.filter(
     (r) =>
@@ -565,10 +576,14 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
           ? triggered
               .map(
                 (r) =>
-                  `${r.name}: ${[...r.signals.agent_workflows, ...(r.signals.copilot_agent ? ["copilot coding agent"] : [])].join(", ")}`,
+                  `${r.name}: ${[
+                    ...r.signals.agent_workflows,
+                    ...(r.signals.copilot_agent ? ["copilot coding agent"] : []),
+                    ...(r.signals.resident_deploy ? ["resident agent (deploy/ manifests)"] : []),
+                  ].join(", ")}`,
               )
               .join("; ")
-          : "no CI-triggered agent workflow or forge coding agent found",
+          : "no agent triggered from CI or a cluster, and no forge coding agent",
     },
     {
       id: "protected-landing",
