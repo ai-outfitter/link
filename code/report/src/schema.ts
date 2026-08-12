@@ -49,6 +49,11 @@ export const EvidenceFinding = z.object({
   docs: z.string(),
 });
 
+export const DeclaredSource = z.object({
+  github: z.string(),
+  ref: z.string().optional(),
+});
+
 export const Signals = z.object({
   agents_md: z.boolean(),
   claude_md: z.boolean(),
@@ -61,6 +66,11 @@ export const Signals = z.object({
   // both files exist.
   agents_links_contributing: z.boolean(),
   dotagents_tree: z.boolean(),
+  // GitHub sources declared by this repository's dotagents settings. Null
+  // means no readable declaration was available; settings_unparseable
+  // distinguishes a missing file from one that exists but could not be read.
+  declared_sources: z.array(DeclaredSource).nullable().default(null),
+  settings_unparseable: z.boolean().default(false),
   ci_workflows: z.number().int().min(0),
   agent_workflows: z.array(z.string()),
   // Catalog-repo signals: an Outfitter catalog carries its payload at the
@@ -230,6 +240,7 @@ export type RepoReport = z.infer<typeof RepoReport>;
 export type Signals = z.infer<typeof Signals>;
 export type BaselineCheck = z.infer<typeof BaselineCheck>;
 export type EvidenceFinding = z.infer<typeof EvidenceFinding>;
+export type DeclaredSource = z.infer<typeof DeclaredSource>;
 export type NextStep = z.infer<typeof NextStep>;
 
 // Loose view of an agent-workflow/v1 document, for the web's workflow pages.

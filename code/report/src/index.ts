@@ -45,6 +45,7 @@ import {
   Signals,
   WorkflowsFile,
 } from "./schema.js";
+import { declaredSourceSignals } from "./sources.js";
 
 // The catalog payload (governance, workflows) sits at the package root, but
 // this file runs from two depths: code/report/src in a checkout, dist/ in an
@@ -140,6 +141,8 @@ type RepoInput = {
   pushed_at: string;
   paths: string[];
   agentsMdBody: string | null;
+  declaredSources: Signals["declared_sources"];
+  settingsUnparseable: Signals["settings_unparseable"];
   branchRules: any[] | null;
   rulesNote: string;
   // Fetched only where they change an answer; null means not looked at, or
@@ -178,6 +181,8 @@ const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
 function classifySignals(
   paths: string[],
   agentsMdBody: string | null,
+  declaredSources: Signals["declared_sources"],
+  settingsUnparseable: Signals["settings_unparseable"],
   evidenceGate: EvidenceFinding | null,
 ): Signals {
   const has = (p: string) => paths.includes(p);
@@ -204,6 +209,8 @@ function classifySignals(
     agents_links_contributing:
       agentsMdBody !== null && /CONTRIBUTING\.md/i.test(agentsMdBody),
     dotagents_tree: dotagentsTree,
+    declared_sources: declaredSources,
+    settings_unparseable: settingsUnparseable,
     ci_workflows: ciWorkflows.length,
     agent_workflows: ciWorkflows.filter(isAgentWorkflow).map((p) => p.replace(CI_DIR, "")),
     catalog,
@@ -325,7 +332,13 @@ function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
     bypassActors: input.bypassActors,
     sample: input.sample,
   });
-  const signals = classifySignals(input.paths, input.agentsMdBody, evidenceGate);
+  const signals = classifySignals(
+    input.paths,
+    input.agentsMdBody,
+    input.declaredSources,
+    input.settingsUnparseable,
+    evidenceGate,
+  );
   const baseline = auditBaseline(signals, input);
   const level = maturityLevel(signals, baseline);
   return RepoReport.parse({
@@ -828,6 +841,22 @@ async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoIn
     ]);
     if (file?.content) agentsMdBody = Buffer.from(file.content, "base64").toString("utf8");
   }
+  const settingsPath = paths.includes(".agents/settings.yml")
+    ? ".agents/settings.yml"
+    : paths.includes("settings.yml")
+      ? "settings.yml"
+      : null;
+  let settingsRaw: string | null | undefined;
+  if (settingsPath !== null) {
+    const file = await ghJson<{ content?: string }>([
+      "api",
+      `repos/${org}/${listing.name}/contents/${settingsPath}`,
+    ]);
+    settingsRaw = file?.content
+      ? Buffer.from(file.content, "base64").toString("utf8")
+      : null;
+  }
+  const sourceSignals = declaredSourceSignals(settingsRaw);
   const branchRules = await ghJson<any[]>([
     "api",
     `repos/${org}/${listing.name}/rules/branches/${branch}`,
@@ -854,6 +883,8 @@ async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoIn
     pushed_at: listing.pushedAt,
     paths,
     agentsMdBody,
+    declaredSources: sourceSignals.declared_sources,
+    settingsUnparseable: sourceSignals.settings_unparseable,
     branchRules,
     rulesNote: "branch rules endpoint not readable with this token",
     bypassActors,
@@ -969,6 +1000,20 @@ async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | nul
       agentsMdBody = readFileSync(join(dir, "AGENTS.md"), "utf8");
     } catch {}
   }
+  const settingsPath = paths.includes(".agents/settings.yml")
+    ? ".agents/settings.yml"
+    : paths.includes("settings.yml")
+      ? "settings.yml"
+      : null;
+  let settingsRaw: string | null | undefined;
+  if (settingsPath !== null) {
+    try {
+      settingsRaw = readFileSync(join(dir, settingsPath), "utf8");
+    } catch {
+      settingsRaw = null;
+    }
+  }
+  const sourceSignals = declaredSourceSignals(settingsRaw);
   const name = dir === root ? basename(dir) : dir.slice(root.length + 1);
   return {
     name,
@@ -977,6 +1022,8 @@ async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | nul
     pushed_at: pushedAt,
     paths,
     agentsMdBody,
+    declaredSources: sourceSignals.declared_sources,
+    settingsUnparseable: sourceSignals.settings_unparseable,
     branchRules: null,
     rulesNote: "local checkout; forge branch rules not queried",
     bypassActors: null,
