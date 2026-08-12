@@ -45,7 +45,11 @@ import {
   Signals,
   WorkflowsFile,
 } from "./schema.js";
-import { declaredSourceSignals } from "./sources.js";
+import {
+  CatalogSourceFinding,
+  catalogSourceFindings,
+  declaredSourceSignals,
+} from "./sources.js";
 
 // The catalog payload (governance, workflows) sits at the package root, but
 // this file runs from two depths: code/report/src in a checkout, dist/ in an
@@ -492,6 +496,14 @@ const REMEDIATION: Record<
       "Do not move it back to `warn`. Effective strictness only ratchets up.",
     ],
   },
+  "catalog-source-governance": {
+    title: "Remove declarations that compete with the organization catalog",
+    how: [
+      "In each affected repository, remove sources already declared by the organization catalog; their version pins belong only in the catalog's root `settings.yml`.",
+      "If the repository declares the organization's `.agents` source, remove its `ref` so one catalog bump propagates throughout the organization.",
+      "Follow the Catalog sources convention: https://github.com/ai-outfitter/.agents/blob/main/AGENTS.md#catalog-sources",
+    ],
+  },
   "branch-protection-backlog": {
     title: "Clear the branch-protection backlog",
     how: [
@@ -502,7 +514,11 @@ const REMEDIATION: Record<
   },
 };
 
-function orgMilestones(ranked: RepoReport[]): Milestone[] {
+function orgMilestones(
+  ranked: RepoReport[],
+  sourceFindings: CatalogSourceFinding[] = [],
+  hasOrgCatalog = false,
+): Milestone[] {
   const names = (repos: RepoReport[]) => repos.map((r) => r.name).join(", ");
   const instr = ranked.filter((r) => r.signals.agents_md || r.signals.claude_md);
   const catalogs = ranked.filter(
@@ -677,6 +693,17 @@ function orgMilestones(ranked: RepoReport[]): Milestone[] {
       status: enforcement === "strict" ? "met" : "unmet",
       evidence: `sdlc-baseline enforcement: ${enforcement}`,
     },
+    {
+      id: "catalog-source-governance",
+      title: "no declared source competes with or pins the organization catalog",
+      status: sourceFindings.length === 0 ? "met" : "unmet",
+      evidence:
+        !hasOrgCatalog
+          ? "no .agents organization catalog found; its source convention does not apply"
+          : sourceFindings.length === 0
+          ? "no repository declaration competes with or pins the organization catalog"
+          : sourceFindings.map(describeCatalogSourceFinding).join("; "),
+    },
   ].map((m) => Milestone.parse({ ...m, level: MILESTONE_LEVEL[m.id] ?? null }));
 }
 
@@ -688,6 +715,7 @@ function remediationPlan(
   orgLevel: number,
   ranked: RepoReport[],
   failingProtection: RepoReport[],
+  sourceFindings: CatalogSourceFinding[] = [],
 ): NextStep[] {
   const byId = (id: string) => milestones.find((m) => m.id === id);
   const names = (repos: RepoReport[]) => repos.map((r) => r.name);
@@ -720,6 +748,7 @@ function remediationPlan(
         ),
       ),
     "branch-protection-backlog": () => names(failingProtection),
+    "catalog-source-governance": () => [...new Set(sourceFindings.map((finding) => finding.repo))],
   };
 
   const steps: NextStep[] = [];
@@ -789,6 +818,16 @@ function remediationPlan(
     );
 
   return steps.map((step, index) => ({ ...step, rank: index + 1 }));
+}
+
+function displayRef(ref: string | null): string {
+  return ref ?? "unpinned";
+}
+
+function describeCatalogSourceFinding(finding: CatalogSourceFinding): string {
+  return finding.kind === "competing-source"
+    ? `${finding.repo}: repo pin competes with the org catalog — ${finding.source} is ${displayRef(finding.repoRef)} in the repo and ${displayRef(finding.catalogRef)} in the org catalog`
+    : `${finding.repo}: organization catalog ${finding.source} is pinned at ${finding.repoRef} inside the org, so one bump will not propagate`;
 }
 
 // ── github source ───────────────────────────────────────────────────────────
@@ -1228,6 +1267,18 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
   // repository rather than the ranked subset: `.agents` classifies as a meta
   // repo and would be filtered out of the ranking before it could be found.
   const dotagents = repos.find((r) => basename(r.name).toLowerCase() === ".agents") ?? null;
+  const sourceFindings = dotagents
+    ? catalogSourceFindings(
+        owner ?? unit.label,
+        dotagents.signals.declared_sources,
+        repos
+          .filter((repo) => repo !== dotagents)
+          .map((repo) => ({
+            name: repo.name,
+            declared_sources: repo.signals.declared_sources,
+          })),
+      )
+    : [];
 
   // Ranking considers only active, non-meta repos: a shelved repo's missing
   // branch protection is not current practice, and org-config or docs-only
@@ -1236,7 +1287,7 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
 
   // The org level is a cumulative capability checklist with evidence, not a
   // repo count — repo counts can be bought with copy-paste workflows.
-  const milestones = orgMilestones(ranked);
+  const milestones = orgMilestones(ranked, sourceFindings, dotagents !== null);
   const met = (id: string) => milestones.find((m) => m.id === id)?.status === "met";
   let orgLevel = 0;
   for (const [level, ids] of Object.entries(LEVEL_REQUIREMENTS)) {
@@ -1256,8 +1307,9 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
     gaps.push(
       `${failing.length}/${ranked.length} ranked repos miss baseline branch protection (required checks + reviews)`,
     );
+  gaps.push(...sourceFindings.map(describeCatalogSourceFinding));
 
-  const nextSteps = remediationPlan(milestones, orgLevel, ranked, failing);
+  const nextSteps = remediationPlan(milestones, orgLevel, ranked, failing, sourceFindings);
 
   return OrgReport.parse({
     org: unit.label,

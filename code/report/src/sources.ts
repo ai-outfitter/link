@@ -43,3 +43,61 @@ export function declaredSourceSignals(raw: string | null | undefined): {
   const declared_sources = parseDeclaredSources(raw);
   return { declared_sources, settings_unparseable: declared_sources === null };
 }
+
+export type CatalogSourceFinding =
+  | {
+      kind: "competing-source";
+      repo: string;
+      source: string;
+      repoRef: string | null;
+      catalogRef: string | null;
+    }
+  | {
+      kind: "pinned-org-catalog";
+      repo: string;
+      source: string;
+      repoRef: string;
+    };
+
+type RepoSources = { name: string; declared_sources: DeclaredSource[] | null };
+
+// Compare only evidence the scan read. A missing settings file is not a
+// negative fact, while a declaration that duplicates the org catalog or pins
+// the org catalog is directly observable and actionable.
+export function catalogSourceFindings(
+  org: string,
+  catalogSources: DeclaredSource[] | null,
+  repos: RepoSources[],
+): CatalogSourceFinding[] {
+  const orgCatalog = `${org}/.agents`.toLowerCase();
+  const catalogBySource = new Map(
+    (catalogSources ?? []).map((source) => [source.github.toLowerCase(), source]),
+  );
+  const findings: CatalogSourceFinding[] = [];
+
+  for (const repo of repos) {
+    if (repo.declared_sources === null) continue;
+    for (const source of repo.declared_sources) {
+      const key = source.github.toLowerCase();
+      if (key === orgCatalog && source.ref !== undefined) {
+        findings.push({
+          kind: "pinned-org-catalog",
+          repo: repo.name,
+          source: source.github,
+          repoRef: source.ref,
+        });
+      }
+      const catalogSource = catalogBySource.get(key);
+      if (catalogSource !== undefined) {
+        findings.push({
+          kind: "competing-source",
+          repo: repo.name,
+          source: source.github,
+          repoRef: source.ref ?? null,
+          catalogRef: catalogSource.ref ?? null,
+        });
+      }
+    }
+  }
+  return findings;
+}
