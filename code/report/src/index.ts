@@ -47,8 +47,10 @@ import {
 } from "./schema.js";
 import {
   CatalogSourceFinding,
+  ResolvedDeclaredSource,
   catalogSourceFindings,
   declaredSourceSignals,
+  resolvePinnedGithubSources,
 } from "./sources.js";
 
 // The catalog payload (governance, workflows) sits at the package root, but
@@ -140,6 +142,7 @@ function dedupe(sources: Source[]): Source[] {
 
 type RepoInput = {
   name: string;
+  sourceIdentity: string | null;
   visibility: string;
   default_branch: string;
   pushed_at: string;
@@ -182,7 +185,7 @@ const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|py|go|rs|java|rb|c|cc|cpp|h|hpp|ex|exs|n
 // GitHub and Forgejo/Gitea CI both count.
 const CI_DIR = /^\.(github|forgejo|gitea)\/workflows\//;
 
-function classifySignals(
+export function classifySignals(
   paths: string[],
   agentsMdBody: string | null,
   declaredSources: Signals["declared_sources"],
@@ -192,11 +195,16 @@ function classifySignals(
   const has = (p: string) => paths.includes(p);
   const ciWorkflows = paths.filter((p) => CI_DIR.test(p) && /\.ya?ml$/.test(p));
   const docCount = paths.filter((p) => p.startsWith("docs/") && p.endsWith(".md")).length;
-  // A catalog repo carries its dotagents payload at the repository root.
-  const catalog =
+  // A catalog repo carries its dotagents payload and contracts at the
+  // repository root. A settings-only repository is also a catalog unless it
+  // has application code; that distinction lets applications consume a root
+  // settings.yml without being mislabeled as catalogs.
+  const carriesCatalogMaterial =
     paths.some((p) => /^agents\/[^/]+\/agent\.md$/.test(p)) ||
     paths.some((p) => /^skills\/[^/]+\/SKILL\.md$/.test(p)) ||
-    has("settings.yml");
+    paths.some((p) => /^(workflows|governance|spec)\//.test(p));
+  const catalog =
+    carriesCatalogMaterial || (has("settings.yml") && !paths.some((p) => CODE_FILE.test(p)));
   // Declared workflows count only when the meta-schema is carried beside
   // them — the validated-contract marker, not just a directory name.
   const declaredWorkflows = has("spec/agent-workflow.v1.schema.json")
@@ -231,7 +239,11 @@ function classifySignals(
   });
 }
 
-function classifyRole(name: string, paths: string[], signals: Signals): "catalog" | "application" | "meta" {
+export function classifyRole(
+  name: string,
+  paths: string[],
+  signals: Signals,
+): "catalog" | "application" | "meta" {
   if (signals.catalog) return "catalog";
   // Meta repos (org config, docs-only) are listed but never ranked: they
   // will never need agent workflows, and counting them against the org
@@ -316,10 +328,64 @@ function auditBaseline(signals: Signals, input: RepoInput): BaselineCheck[] {
   return checks;
 }
 
-function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
+type SourceResolution = ResolvedDeclaredSource<Signals> & {
+  signals: Signals | null;
+};
+
+function resolveSources(
+  signals: Signals,
+  sourceSignals: ReadonlyMap<string, Signals>,
+  unpinnedOrgCatalogs: ReadonlySet<string> = new Set(),
+): SourceResolution[] {
+  return resolvePinnedGithubSources(
+    signals.declared_sources,
+    sourceSignals,
+    unpinnedOrgCatalogs,
+  ).map(({ source, identity, value, trackingOrgCatalog }) => ({
+    source,
+    identity,
+    value,
+    trackingOrgCatalog,
+    signals: value,
+  }));
+}
+
+function inheritedMaterial(
+  signals: Signals,
+  sourceSignals: ReadonlyMap<string, Signals>,
+  material: "declared_workflows" | "governance",
+): SourceResolution | null {
+  return (
+    resolveSources(signals, sourceSignals).find((resolved) => {
+      if (resolved.signals === null) return false;
+      return material === "declared_workflows"
+        ? resolved.signals.declared_workflows.length > 0
+        : resolved.signals.governance;
+    }) ?? null
+  );
+}
+
+function isSharedCatalog(
+  signals: Signals,
+  sourceSignals: ReadonlyMap<string, Signals>,
+): boolean {
+  if (!signals.catalog) return false;
+  const workflows =
+    signals.declared_workflows.length > 0 ||
+    inheritedMaterial(signals, sourceSignals, "declared_workflows") !== null;
+  const governance =
+    signals.governance || inheritedMaterial(signals, sourceSignals, "governance") !== null;
+  return workflows && governance;
+}
+
+function maturityLevel(
+  signals: Signals,
+  baseline: BaselineCheck[],
+  sourceSignals: ReadonlyMap<string, Signals>,
+): number {
   // A shared catalog carrying validated workflow definitions and a
   // governance policy is the level-4 marker on the adoption ramp.
-  if (signals.catalog && signals.declared_workflows.length > 0 && signals.governance) return 4;
+  if (isSharedCatalog(signals, sourceSignals)) return 4;
   const bp = baseline.find((c) => c.rule === "branch-protection");
   if (signals.agent_workflows.length > 0 && bp?.status === "pass") return 3;
   if (signals.catalog || signals.agent_workflows.length > 0 || signals.dotagents_tree) return 2;
@@ -327,7 +393,11 @@ function maturityLevel(signals: Signals, baseline: BaselineCheck[]): number {
   return 0;
 }
 
-function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
+type ScannedRepo = Omit<RepoReport, "level" | "level_name"> & {
+  sourceIdentity: string | null;
+};
+
+function buildScannedRepo(input: RepoInput, activeCutoff: number): ScannedRepo {
   const evidenceGate = detectEvidenceGate({
     paths: input.paths,
     requiredChecks: requiredCheckContexts(input.branchRules),
@@ -344,9 +414,10 @@ function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
     evidenceGate,
   );
   const baseline = auditBaseline(signals, input);
-  const level = maturityLevel(signals, baseline);
-  return RepoReport.parse({
+  return {
     name: input.name,
+    sourceIdentity: input.sourceIdentity,
+    url: null,
     visibility: input.visibility,
     default_branch: input.default_branch,
     pushed_at: input.pushed_at,
@@ -354,9 +425,16 @@ function buildRepoReport(input: RepoInput, activeCutoff: number): RepoReport {
     role: classifyRole(input.name, input.paths, signals),
     signals,
     baseline,
-    level,
-    level_name: LEVEL_NAMES[level],
-  });
+  };
+}
+
+function finalizeRepo(
+  scanned: ScannedRepo,
+  sourceSignals: ReadonlyMap<string, Signals>,
+): RepoReport {
+  const { sourceIdentity: _, ...repo } = scanned;
+  const level = maturityLevel(repo.signals, repo.baseline, sourceSignals);
+  return RepoReport.parse({ ...repo, level, level_name: LEVEL_NAMES[level] });
 }
 
 // ── milestones ──────────────────────────────────────────────────────────────
@@ -514,19 +592,167 @@ const REMEDIATION: Record<
   },
 };
 
+type CatalogAssessment = {
+  status: "met" | "unmet" | "unknown";
+  evidence: string;
+};
+
+const sourceLabel = (resolution: SourceResolution) =>
+  resolution.trackingOrgCatalog
+    ? `${resolution.source.github} tracking the org catalog`
+    : `${resolution.source.github} at ref ${resolution.source.ref}`;
+
+function sharedCatalogAssessment(
+  repo: RepoReport,
+  sourceSignals: ReadonlyMap<string, Signals>,
+): CatalogAssessment {
+  const resolutions = resolveSources(repo.signals, sourceSignals);
+  const workflowSource = inheritedMaterial(repo.signals, sourceSignals, "declared_workflows");
+  const governanceSource = inheritedMaterial(repo.signals, sourceSignals, "governance");
+  const hasWorkflows = repo.signals.declared_workflows.length > 0 || workflowSource !== null;
+  const hasGovernance = repo.signals.governance || governanceSource !== null;
+  const missing = [
+    ...(!hasWorkflows ? ["validated workflows"] : []),
+    ...(!hasGovernance ? ["a governance policy"] : []),
+  ];
+  const carried = [
+    ...(repo.signals.declared_workflows.length > 0 ? ["validated workflows"] : []),
+    ...(repo.signals.governance ? ["a governance policy"] : []),
+  ];
+  const inherited = new Map<string, string[]>();
+  if (workflowSource) inherited.set(sourceLabel(workflowSource), ["validated workflows"]);
+  if (governanceSource) {
+    const label = sourceLabel(governanceSource);
+    inherited.set(label, [
+      ...(inherited.get(label) ?? []),
+      "a governance policy",
+    ]);
+  }
+  const evidence = [
+    ...(carried.length > 0 ? [`${repo.name} carries ${carried.join(" and ")}`] : []),
+    ...[...inherited].map(
+      ([source, material]) =>
+        `${repo.name} inherits ${material.join(" and ")} from ${source}; contents were verified from a scanned copy at an unknown revision (the declared ref was not checked)`,
+    ),
+  ];
+  if (missing.length === 0) return { status: "met", evidence: evidence.join("; ") };
+
+  const unresolved = resolutions.filter((resolution) => resolution.signals === null);
+  if (unresolved.length > 0) {
+    evidence.push(
+      ...unresolved.map(
+        (resolution) =>
+          `${repo.name} inherits from ${sourceLabel(resolution)}; contents not fetched, unverified`,
+      ),
+    );
+    return { status: "unknown", evidence: evidence.join("; ") };
+  }
+
+  if (resolutions.length > 0) {
+    evidence.push(
+      `${repo.name} is missing ${missing.join(" and ")}; its resolved sources were inspected only as scanned copies at unknown revisions`,
+    );
+  } else {
+    evidence.push(`${repo.name} is missing ${missing.join(" and ")} and declares no pinned source`);
+  }
+  return { status: "unmet", evidence: evidence.join("; ") };
+}
+
+export function catalogConsumptionAssessment(
+  repo: RepoReport,
+  orgIdentity: string | null,
+  sourceSignals: ReadonlyMap<string, Signals>,
+): CatalogAssessment | null {
+  const ownGithubPrefix = orgIdentity?.startsWith("github.com/")
+    ? `github:${orgIdentity.slice("github.com/".length).toLowerCase()}/`
+    : null;
+  const unpinnedOrgCatalogs = new Set(
+    [...sourceSignals]
+      .filter(
+        ([identity, signals]) =>
+          ownGithubPrefix !== null && identity.startsWith(ownGithubPrefix) && signals.catalog,
+      )
+      .map(([identity]) => identity),
+  );
+  const resolutions = resolveSources(repo.signals, sourceSignals, unpinnedOrgCatalogs);
+  const ownCatalog = resolutions.find(
+    (resolution) =>
+      resolution.identity !== null &&
+      ownGithubPrefix !== null &&
+      resolution.identity.startsWith(ownGithubPrefix) &&
+      resolution.signals?.catalog,
+  );
+  const metEvidence = [
+    ...(repo.signals.dotagents_tree ? [`${repo.name} carries a dotagents payload`] : []),
+    ...(ownCatalog
+      ? [
+          `${repo.name} inherits from ${sourceLabel(ownCatalog)}; ${
+            ownCatalog.trackingOrgCatalog
+              ? "catalog contents were verified from the scanned org catalog's current revision"
+              : "catalog contents were verified from a scanned copy at an unknown revision (the declared ref was not checked)"
+          }`,
+        ]
+      : []),
+  ];
+  if (metEvidence.length > 0) {
+    return {
+      status: "met",
+      evidence: metEvidence.join("; "),
+    };
+  }
+  if (resolutions.length === 0) return null;
+  return {
+    status: "unknown",
+    evidence: resolutions
+      .map((resolution) => {
+        const label = sourceLabel(resolution);
+        if (resolution.signals === null)
+          return `${repo.name} inherits from ${label}; contents not fetched, unverified`;
+        if (ownGithubPrefix === null || !resolution.identity?.startsWith(ownGithubPrefix))
+          return `${repo.name} inherits from ${label}; the scanned source is not a catalog in this organization`;
+        return `${repo.name} inherits from ${label}; the scanned copy at an unknown revision is not a catalog`;
+      })
+      .join("; "),
+  };
+}
+
+function reportedAssessments(
+  assessments: CatalogAssessment[],
+  status: CatalogAssessment["status"],
+): CatalogAssessment[] {
+  return status === "unmet"
+    ? assessments
+    : assessments.filter((assessment) => assessment.status === status);
+}
+
 function orgMilestones(
   ranked: RepoReport[],
+  orgIdentity: string | null,
+  sourceSignals: ReadonlyMap<string, Signals>,
   sourceFindings: CatalogSourceFinding[] = [],
   hasOrgCatalog = false,
 ): Milestone[] {
   const names = (repos: RepoReport[]) => repos.map((r) => r.name).join(", ");
   const instr = ranked.filter((r) => r.signals.agents_md || r.signals.claude_md);
-  const catalogs = ranked.filter(
-    (r) => r.signals.catalog && r.signals.declared_workflows.length > 0 && r.signals.governance,
-  );
-  const consumers = ranked.filter(
-    (r) => r.role === "application" && r.signals.dotagents_tree,
-  );
+  const catalogAssessments = ranked
+    .filter((r) => r.signals.catalog)
+    .map((repo) => sharedCatalogAssessment(repo, sourceSignals));
+  const catalogStatus = catalogAssessments.some((assessment) => assessment.status === "met")
+    ? "met"
+    : catalogAssessments.some((assessment) => assessment.status === "unknown")
+      ? "unknown"
+      : "unmet";
+  const consumptionAssessments = ranked
+    .filter((r) => r.role === "application")
+    .map((repo) => catalogConsumptionAssessment(repo, orgIdentity, sourceSignals))
+    .filter((assessment): assessment is CatalogAssessment => assessment !== null);
+  const consumptionStatus = consumptionAssessments.some(
+    (assessment) => assessment.status === "met",
+  )
+    ? "met"
+    : consumptionAssessments.length > 0
+      ? "unknown"
+      : "unmet";
   // "an issue, a message, or a schedule triggers agents in CI **or a cluster**"
   // — outfitter/docs/philosophy.md, the canonical ramp definition. A resident
   // agent satisfies this rung, and excluding it meant an organization that ran
@@ -605,20 +831,24 @@ function orgMilestones(
     {
       id: "shared-catalog",
       title: "governed shared catalog",
-      status: catalogs.length > 0 ? "met" : "unmet",
+      status: catalogStatus,
       evidence:
-        catalogs.length > 0
-          ? `${names(catalogs)} carry validated workflows beside a governance policy`
+        reportedAssessments(catalogAssessments, catalogStatus).length > 0
+          ? reportedAssessments(catalogAssessments, catalogStatus)
+              .map((assessment) => assessment.evidence)
+              .join("; ")
           : "no repo carries validated workflow definitions beside a governance policy",
     },
     {
       id: "catalog-consumed",
       title: "catalog consumed by application repos",
-      status: consumers.length > 0 ? "met" : "unmet",
+      status: consumptionStatus,
       evidence:
-        consumers.length > 0
-          ? `${consumers.length} application repos carry a dotagents payload (${names(consumers)})`
-          : "no application repo carries a dotagents payload; pinned-source consumption is not tree-visible",
+        consumptionAssessments.length > 0
+          ? reportedAssessments(consumptionAssessments, consumptionStatus)
+              .map((assessment) => assessment.evidence)
+              .join("; ")
+          : "no application repo carries a dotagents payload or declares a catalog source",
     },
     {
       id: "triggered-agents",
@@ -715,6 +945,8 @@ function remediationPlan(
   orgLevel: number,
   ranked: RepoReport[],
   failingProtection: RepoReport[],
+  orgIdentity: string | null,
+  sourceSignals: ReadonlyMap<string, Signals>,
   sourceFindings: CatalogSourceFinding[] = [],
 ): NextStep[] {
   const byId = (id: string) => milestones.find((m) => m.id === id);
@@ -726,7 +958,13 @@ function remediationPlan(
     instructions: () =>
       names(ranked.filter((r) => !r.signals.agents_md && !r.signals.claude_md)),
     "catalog-consumed": () =>
-      names(ranked.filter((r) => r.role === "application" && !r.signals.dotagents_tree)),
+      names(
+        ranked.filter(
+          (r) =>
+            r.role === "application" &&
+            catalogConsumptionAssessment(r, orgIdentity, sourceSignals)?.status !== "met",
+        ),
+      ),
     "protected-landing": () =>
       names(
         ranked.filter(
@@ -917,6 +1155,7 @@ async function scanGithubRepo(org: string, listing: RepoListing): Promise<RepoIn
 
   return {
     name: listing.name,
+    sourceIdentity: `github:${org.toLowerCase()}/${listing.name.toLowerCase()}`,
     visibility: listing.visibility.toLowerCase(),
     default_branch: branch,
     pushed_at: listing.pushedAt,
@@ -1056,6 +1295,7 @@ async function scanLocalRepo(root: string, dir: string): Promise<RepoInput | nul
   const name = dir === root ? basename(dir) : dir.slice(root.length + 1);
   return {
     name,
+    sourceIdentity: await localSourceIdentity(dir),
     visibility: "local",
     default_branch: branch,
     pushed_at: pushedAt,
@@ -1101,12 +1341,29 @@ type ScanUnit = {
   folders: { root: string; dirs: string[] }[];
 };
 
-const REMOTE_OWNER = /(?:@|\/\/)([^/:@]+)(?::\d+)?[:/]([^/]+)\//;
+const REMOTE_REPOSITORY =
+  /(?:@|\/\/)([^/:@]+)(?::\d+)?[:/]([^/]+)\/([^/#]+?)(?:\.git)?\/?$/;
+
+async function remoteRepository(dir: string) {
+  const url = await git(dir, ["remote", "get-url", "origin"]);
+  const match = url?.match(REMOTE_REPOSITORY);
+  return match
+    ? {
+        host: match[1].toLowerCase(),
+        owner: match[2].toLowerCase(),
+        repo: match[3].toLowerCase(),
+      }
+    : null;
+}
 
 async function repoIdentity(dir: string): Promise<string | null> {
-  const url = await git(dir, ["remote", "get-url", "origin"]);
-  const m = url?.match(REMOTE_OWNER);
-  return m ? `${m[1].toLowerCase()}/${m[2].toLowerCase()}` : null;
+  const remote = await remoteRepository(dir);
+  return remote ? `${remote.host}/${remote.owner}` : null;
+}
+
+async function localSourceIdentity(dir: string): Promise<string | null> {
+  const remote = await remoteRepository(dir);
+  return remote?.host === "github.com" ? `github:${remote.owner}/${remote.repo}` : null;
 }
 
 async function buildUnits(sources: Source[]): Promise<ScanUnit[]> {
@@ -1155,15 +1412,26 @@ async function buildUnits(sources: Source[]): Promise<ScanUnit[]> {
 // combination matters to a reader: "github-repo" alone means the org's other
 // repositories were never examined, so an org level derived from it is a
 // statement about those repositories only.
-function sourceType(unit: ScanUnit): string {
+function sourceType(unit: ScanUnit): OrgReport["source_type"] {
   const parts: string[] = [];
   if (unit.org !== null) parts.push("github-org");
   if (unit.repos.length > 0) parts.push("github-repo");
   if (unit.folders.length > 0) parts.push("folder");
-  return parts.join("+") || "folder";
+  return (parts.join("+") || "folder") as OrgReport["source_type"];
 }
 
-async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
+type ScannedUnit = {
+  org: string;
+  owner: string | null;
+  sourceType: OrgReport["source_type"];
+  identity: string | null;
+  scannedAt: string;
+  samplingNote: string;
+  rankingNote: string;
+  repos: ScannedRepo[];
+};
+
+async function scanUnit(unit: ScanUnit): Promise<ScannedUnit> {
   const activeCutoff = Date.now() - ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   const inputs: (RepoInput | null)[] = [];
   const notes: string[] = [];
@@ -1255,7 +1523,7 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
   const repos = inputs
     .filter((r): r is RepoInput => r !== null)
     .map((r) => {
-      const report = buildRepoReport(r, activeCutoff);
+      const report = buildScannedRepo(r, activeCutoff);
       const url =
         owner && forgeListed.has(basename(r.name).toLowerCase())
           ? `https://github.com/${owner}/${basename(r.name)}`
@@ -1263,13 +1531,38 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
       return { ...report, url };
     });
 
-  // The dotagents catalog, if the org keeps one. Searched across every
-  // repository rather than the ranked subset: `.agents` classifies as a meta
-  // repo and would be filtered out of the ranking before it could be found.
+  const rankedCount = repos.filter((r) => r.active && r.role !== "meta").length;
+  return {
+    org: unit.label,
+    owner,
+    sourceType: sourceType(unit),
+    identity: unit.identity,
+    scannedAt: new Date().toISOString(),
+    samplingNote,
+    rankingNote: `ranking covers the ${rankedCount} active catalog/application repos; ${repos.length - rankedCount} inactive or meta repos are listed but not ranked`,
+    repos,
+  };
+}
+
+function sourceSignalMap(units: ScannedUnit[]): Map<string, Signals> {
+  const sourceSignals = new Map<string, Signals>();
+  for (const unit of units) {
+    for (const repo of unit.repos) {
+      if (repo.sourceIdentity !== null) sourceSignals.set(repo.sourceIdentity, repo.signals);
+    }
+  }
+  return sourceSignals;
+}
+
+function finalizeUnit(
+  unit: ScannedUnit,
+  sourceSignals: ReadonlyMap<string, Signals>,
+): OrgReport {
+  const repos = unit.repos.map((repo) => finalizeRepo(repo, sourceSignals));
   const dotagents = repos.find((r) => basename(r.name).toLowerCase() === ".agents") ?? null;
   const sourceFindings = dotagents
     ? catalogSourceFindings(
-        owner ?? unit.label,
+        unit.owner ?? unit.org,
         dotagents.signals.declared_sources,
         repos
           .filter((repo) => repo !== dotagents)
@@ -1279,29 +1572,28 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
           })),
       )
     : [];
-
-  // Ranking considers only active, non-meta repos: a shelved repo's missing
-  // branch protection is not current practice, and org-config or docs-only
-  // repos will never need agent workflows.
-  const ranked = repos.filter((r) => r.active && r.role !== "meta");
-
-  // The org level is a cumulative capability checklist with evidence, not a
-  // repo count — repo counts can be bought with copy-paste workflows.
-  const milestones = orgMilestones(ranked, sourceFindings, dotagents !== null);
+  const ranked = repos.filter((repo) => repo.active && repo.role !== "meta");
+  const milestones = orgMilestones(
+    ranked,
+    unit.identity,
+    sourceSignals,
+    sourceFindings,
+    dotagents !== null,
+  );
   const met = (id: string) => milestones.find((m) => m.id === id)?.status === "met";
   let orgLevel = 0;
   for (const [level, ids] of Object.entries(LEVEL_REQUIREMENTS)) {
     if (orgLevel === Number(level) - 1 && ids.every(met)) orgLevel = Number(level);
   }
 
-  // Gaps are what blocks the next level, plus the protection backlog.
   const gaps: string[] = [];
   for (const id of LEVEL_REQUIREMENTS[orgLevel + 1] ?? []) {
-    const m = milestones.find((x) => x.id === id)!;
-    if (m.status !== "met") gaps.push(`level ${orgLevel + 1} blocked — ${m.title}: ${m.evidence}`);
+    const milestone = milestones.find((candidate) => candidate.id === id)!;
+    if (milestone.status !== "met")
+      gaps.push(`level ${orgLevel + 1} blocked — ${milestone.title}: ${milestone.evidence}`);
   }
-  const failing = ranked.filter((r) =>
-    r.baseline.some((c) => c.rule === "branch-protection" && c.status === "fail"),
+  const failing = ranked.filter((repo) =>
+    repo.baseline.some((check) => check.rule === "branch-protection" && check.status === "fail"),
   );
   if (failing.length > 0)
     gaps.push(
@@ -1309,23 +1601,29 @@ async function scanUnit(unit: ScanUnit): Promise<OrgReport> {
     );
   gaps.push(...sourceFindings.map(describeCatalogSourceFinding));
 
-  const nextSteps = remediationPlan(milestones, orgLevel, ranked, failing, sourceFindings);
-
   return OrgReport.parse({
-    org: unit.label,
-    source_type: sourceType(unit),
+    org: unit.org,
+    source_type: unit.sourceType,
     identity: unit.identity,
     dotagents_repo: dotagents?.name ?? null,
     dotagents_url: dotagents?.url ?? null,
-    scanned_at: new Date().toISOString(),
-    sampling_note: samplingNote,
-    ranking_note: `ranking covers the ${ranked.length} active catalog/application repos; ${repos.length - ranked.length} inactive or meta repos are listed but not ranked`,
+    scanned_at: unit.scannedAt,
+    sampling_note: unit.samplingNote,
+    ranking_note: unit.rankingNote,
     repos,
     milestones,
     org_level: orgLevel,
     org_level_name: LEVEL_NAMES[orgLevel],
     gaps,
-    next_steps: nextSteps,
+    next_steps: remediationPlan(
+      milestones,
+      orgLevel,
+      ranked,
+      failing,
+      unit.identity,
+      sourceSignals,
+      sourceFindings,
+    ),
   });
 }
 
@@ -1390,10 +1688,17 @@ export async function runReport(argv: string[]): Promise<number> {
     return 2;
   }
 
-  const orgs = await mapLimit(await buildUnits(sources), 2, scanUnit);
+  // Inheritance is resolved after every unit has been scanned so a declared
+  // source can match a repository supplied by another org, named-repo, or
+  // local-folder input in the same report.
+  const scannedUnits = await mapLimit(await buildUnits(sources), 2, scanUnit);
+  const sourceSignals = sourceSignalMap(scannedUnits);
+  const orgs = scannedUnits.map((unit) => finalizeUnit(unit, sourceSignals));
 
   const evidenceLimits = [
     "forge tree scan and local git ls-files only: unpushed and untracked practice is invisible",
+    "pinned GitHub declarations and unpinned declarations tracking an organization catalog are matched only to repositories included elsewhere in the same scan; declared sources are not fetched",
+    "resolved declarations ignore the declared ref: inherited evidence comes from a scanned working tree at an unknown revision, not necessarily the declared revision",
     "absence of evidence is recorded as absence, not as a negative fact",
     `github orgs sample at most the ${REPO_LIMIT} most recently pushed repositories`,
     "org-level settings (bot capability caps, team membership) were not queried",

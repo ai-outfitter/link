@@ -44,6 +44,44 @@ export function declaredSourceSignals(raw: string | null | undefined): {
   return { declared_sources, settings_unparseable: declared_sources === null };
 }
 
+export type ResolvedDeclaredSource<T> = {
+  source: DeclaredSource;
+  identity: string | null;
+  value: T | null;
+  trackingOrgCatalog: boolean;
+};
+
+export function githubSourceIdentity(source: string): string | null {
+  const parts = source.trim().split("/");
+  return parts.length === 2 && parts.every(Boolean)
+    ? `github:${parts[0].toLowerCase()}/${parts[1].toLowerCase()}`
+    : null;
+}
+
+// Resolution is deliberately scan-local: a declaration is evidence of what
+// a repository intends to inherit, while the matched repository supplies the
+// only contents this read-only scanner can verify. The ref remains evidence
+// but is not fetched or checked against the scanned copy.
+export function resolvePinnedGithubSources<T>(
+  declaredSources: DeclaredSource[] | null,
+  sourceValues: ReadonlyMap<string, T>,
+  unpinnedOrgCatalogs: ReadonlySet<string> = new Set(),
+): ResolvedDeclaredSource<T>[] {
+  return (declaredSources ?? [])
+    .map((source) => {
+      const identity = githubSourceIdentity(source.github);
+      const trackingOrgCatalog =
+        source.ref === undefined && identity !== null && unpinnedOrgCatalogs.has(identity);
+      return {
+        source,
+        identity,
+        value: identity ? (sourceValues.get(identity) ?? null) : null,
+        trackingOrgCatalog,
+      };
+    })
+    .filter((resolved) => resolved.source.ref !== undefined || resolved.trackingOrgCatalog);
+}
+
 export type CatalogSourceFinding =
   | {
       kind: "competing-source";
