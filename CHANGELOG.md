@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/ai-outfitter/link/compare/v1.5.0...v1.6.0) (2026-08-13)
+
+
+### Features
+
+* **report:** resolve inherited catalog sources ([2ee10e1](https://github.com/ai-outfitter/link/commit/2ee10e1ae508b71d0e529b8b88c4d6bf6a488e52))
+
 ## [1.5.0](https://github.com/ai-outfitter/link/compare/v1.4.0...v1.5.0) (2026-08-13)
 
 
