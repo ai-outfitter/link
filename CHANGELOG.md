@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.5.0](https://github.com/ai-outfitter/link/compare/v1.4.0...v1.5.0) (2026-08-13)
+
+
+### Features
+
+* **report:** band the plan and the milestones by the rung they gate ([a57c764](https://github.com/ai-outfitter/link/commit/a57c7644cc7bd315d2e5671c89fb0b960a67c105))
+* **report:** credit resident agents at triggered-agents ([71a7911](https://github.com/ai-outfitter/link/commit/71a7911e659bee73e7f0520b2d835478a4e4121a))
+* **report:** decide the evidence gate through pluggable backends ([0ea634f](https://github.com/ai-outfitter/link/commit/0ea634f218b0accb2828b4455447da5508ea2da4))
+* **report:** keep direct-push and bypass facts when no backend matches ([c88be90](https://github.com/ai-outfitter/link/commit/c88be90d19e6286635e1459a083631465f3917ba))
+* **report:** link repositories to their forge and surface the dotagents catalog ([e83c438](https://github.com/ai-outfitter/link/commit/e83c438bcb4a85c071f3b074231ef698e80e8b91))
+* **report:** name issue triage and pull-request review as the on-ramp ([358ef35](https://github.com/ai-outfitter/link/commit/358ef35eb1203306611dd10036435b92b0bcceba))
+* **report:** rank the findings as a plan for reaching the next rung ([21b59ab](https://github.com/ai-outfitter/link/commit/21b59abc23101a06bf2666bb11e7b1fecb25b900))
+* **report:** read each repo's declared catalog sources ([ff581bb](https://github.com/ai-outfitter/link/commit/ff581bb4cc94ed304bdd918430762e0f85b1808b))
+* **report:** read issue templates and CODEOWNERS as signals ([8b19cd0](https://github.com/ai-outfitter/link/commit/8b19cd0af854fda655382c4b79ed80aaf37eef69))
+* **report:** report a repo pin competing with the org catalog as a finding ([4ad7907](https://github.com/ai-outfitter/link/commit/4ad790784a4ef18a3333ff80de8c6c81a7ea5dc4))
+* **report:** require an evidence gate to be exercised, not merely required ([fbabbdb](https://github.com/ai-outfitter/link/commit/fbabbdbd64d8e2459a9f5fc68149ce672b6870e8))
+* triage issues with an agent resolved from the catalog ([#18](https://github.com/ai-outfitter/link/issues/18)) ([903816f](https://github.com/ai-outfitter/link/commit/903816fcc9b18a0041daaebfe132d85bbb5174c7))
+* **web:** render the governance baseline at /baseline ([47b576f](https://github.com/ai-outfitter/link/commit/47b576fcca5040fb32d228e7abbffb7557d26f51))
+
+
+### Bug Fixes
+
+* **evidence:** stop matching dependency audits as evidence gates ([72375c7](https://github.com/ai-outfitter/link/commit/72375c7b2cd1bed2ec669e2a01dcd4c70b671b0d))
+* **report:** count pull-request review workflows as agent workflows ([7bfa8b3](https://github.com/ai-outfitter/link/commit/7bfa8b3ecfd4572183c281e4ce80d4f08b138f0c))
+* **report:** drop the hardcoded ~/repos/ai-outfitter default source ([5950226](https://github.com/ai-outfitter/link/commit/59502266e188f6a8bc3af62794eb176ce29527e5))
+* **report:** report an unreadable evidence gate as unknown, not fail ([ab23283](https://github.com/ai-outfitter/link/commit/ab232835880b1922e850d12446d61d7d376d76d2))
+* track the action's v1 tag instead of a commit ([#20](https://github.com/ai-outfitter/link/issues/20)) ([68b37a4](https://github.com/ai-outfitter/link/commit/68b37a47c6b86c2c1bacef158226a3d35299426d))
+* **web:** label every source type on the org card ([c82559d](https://github.com/ai-outfitter/link/commit/c82559d9d131594e5bb4031a0a204502bc871e55))
+
 ## [1.4.0](https://github.com/ai-outfitter/link/compare/v1.3.0...v1.4.0) (2026-08-10)
 
 
