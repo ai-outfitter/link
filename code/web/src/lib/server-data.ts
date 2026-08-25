@@ -37,7 +37,8 @@ const XDG_DATA = join(
 );
 const SOURCES_FILE = join(XDG_CONFIG, "sources.json");
 
-export type Source = { type: "github-org" | "folder"; target: string };
+export type Source = { type: "github-org" | "github-repo" | "folder"; target: string };
+const OWNER_REPO = /^[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 
 function readJson(path: string): any | null {
   try {
@@ -79,7 +80,9 @@ export function addSource(target: string): { sources: Source[]; added: Source } 
   const expanded = target.startsWith("~") ? join(homedir(), target.slice(1)) : target;
   const added: Source = existsSync(expanded)
     ? { type: "folder", target: resolve(expanded) }
-    : { type: "github-org", target };
+    : OWNER_REPO.test(target)
+      ? { type: "github-repo", target }
+      : { type: "github-org", target };
   const sources = loadSources();
   if (!sources.some((s) => s.type === added.type && s.target === added.target)) {
     sources.push(added);

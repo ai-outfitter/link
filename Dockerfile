@@ -11,7 +11,8 @@
 # user who chose the container to avoid installing node has no other way to
 # look at what they just generated.
 #
-#   docker run --rm -e GH_TOKEN -v "$PWD:/work" -p 4321:4321 \
+#   docker run --rm -e GH_TOKEN -e LINK_HOST=0.0.0.0 -e LINK_ACCESS_TOKEN \
+#     -v "$PWD:/work" -p 4321:4321 \
 #     ghcr.io/ai-outfitter/link web
 
 FROM node:22-bookworm-slim AS build
@@ -64,7 +65,6 @@ RUN ln -s /app/dist/cli.js /usr/local/bin/link && chmod +x /app/dist/cli.js
 # inside a container means nothing outside it can connect. 0.0.0.0 is the
 # only useful default here; it is the container's own network namespace, not
 # the host's.
-ENV HOST=0.0.0.0
 ENV PORT=4321
 EXPOSE 4321
 

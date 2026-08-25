@@ -4,6 +4,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 import "@fontsource/instrument-serif/400.css";
 import "../styles/global.css";
+import { requestToken } from "../lib/security.ts";
 
 const { title } = Astro.props;
 const path = Astro.url.pathname;
@@ -13,6 +14,7 @@ const path = Astro.url.pathname;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="link-request-token" content={requestToken()} />
     <title>{title}</title>
   </head>
   <body>

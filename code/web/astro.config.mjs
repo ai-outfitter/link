@@ -5,7 +5,6 @@ export default defineConfig({
   site: "https://ai-outfitter.github.io",
   output: "server",
   adapter: node({ mode: "standalone" }),
-  // Local dev convenience: listen on all interfaces and accept any hostname.
-  server: { host: true },
-  vite: { server: { allowedHosts: true } },
+  server: { host: process.env.LINK_HOST ?? "127.0.0.1" },
+  vite: { server: { allowedHosts: [process.env.LINK_HOST ?? "127.0.0.1", "localhost"] } },
 });

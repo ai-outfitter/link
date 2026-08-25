@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { runReport } from "./index.js";
 
 const USAGE = `link — audit organizations against the Outfitter SDLC governance baseline
@@ -50,8 +51,13 @@ async function web(): Promise<number> {
   const bundled = root ? join(root, "dist-web", "server", "entry.mjs") : null;
   if (bundled && existsSync(bundled)) {
     const port = process.env.PORT ?? "4321";
-    console.error(`link web → http://localhost:${port}`);
-    return run(process.execPath, [bundled], { env: { ...process.env, PORT: port } });
+    const host = process.env.LINK_HOST ?? "127.0.0.1";
+    if (!["127.0.0.1", "localhost", "::1"].includes(host) && !process.env.LINK_ACCESS_TOKEN) {
+      console.error("non-loopback serving requires LINK_ACCESS_TOKEN");
+      return 2;
+    }
+    console.error(`link web → http://${host}:${port}`);
+    return run(process.execPath, [bundled], { env: { ...process.env, HOST: host, PORT: port, LINK_REQUEST_TOKEN: process.env.LINK_REQUEST_TOKEN ?? randomBytes(24).toString("hex") } });
   }
 
   // A checkout with no built site: the Astro dev server gives hot reload,

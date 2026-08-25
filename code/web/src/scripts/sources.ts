@@ -4,6 +4,8 @@ const form = document.getElementById("add-source-form") as HTMLFormElement | nul
 const input = document.getElementById("source-target") as HTMLInputElement | null;
 const rescan = document.getElementById("rescan") as HTMLButtonElement | null;
 const statusEl = document.getElementById("scan-status");
+const requestToken = document.querySelector<HTMLMetaElement>('meta[name="link-request-token"]')?.content ?? "";
+const mutationHeaders = { "x-link-request-token": requestToken };
 
 function setStatus(text: string) {
   if (statusEl) statusEl.textContent = text;
@@ -17,7 +19,7 @@ async function scan() {
   setBusy(true);
   setStatus("scanning… (30–90s for github orgs)");
   try {
-    const res = await fetch("/api/scan", { method: "POST" });
+    const res = await fetch("/api/scan", { method: "POST", headers: mutationHeaders });
     const body = await res.json();
     if (!res.ok) {
       setStatus(`scan failed: ${body.output ?? res.status}`);
@@ -41,7 +43,7 @@ form?.addEventListener("submit", async (event) => {
   try {
     const res = await fetch("/api/sources", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...mutationHeaders },
       body: JSON.stringify({ target }),
     });
     if (!res.ok) {
