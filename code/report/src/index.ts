@@ -20,6 +20,7 @@ import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { join, resolve, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
 import {
   BypassActor,
@@ -86,6 +87,23 @@ const CONCURRENCY = 8;
 // A repo with no push in this window is inactive: still scanned and shown,
 // but excluded from the org-level ranking and the gap counts.
 const ACTIVE_WINDOW_DAYS = 7;
+
+function safeScope(report: Report): string {
+  return report.orgs
+    .map((org) => org.org)
+    .join("+")
+    .toLowerCase()
+    .replace(/[^a-z0-9._+-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "scan";
+}
+
+function scanIdentity(report: Report): { id: string; fingerprint: string } {
+  const fingerprint = createHash("sha256")
+    .update(JSON.stringify(report))
+    .digest("hex");
+  const stamp = report.generated_at.replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return { id: `${stamp}-${fingerprint.slice(0, 12)}`, fingerprint };
+}
 
 type Source = { type: "github-org" | "github-repo" | "folder"; target: string };
 
@@ -442,7 +460,7 @@ function finalizeRepo(
 const LEVEL_REQUIREMENTS: Record<number, string[]> = {
   1: ["instructions"],
   2: ["shared-catalog", "catalog-consumed"],
-  3: ["triggered-agents", "protected-landing", "session-capture"],
+  3: ["triggered-agents", "agent-review", "protected-landing", "session-capture"],
   4: ["bot-identity", "strict-governance"],
 };
 
@@ -520,6 +538,14 @@ const REMEDIATION: Record<
       "Run this job in CI even when the organization runs a cluster. Reviewing one pull request is stateless, short, and scoped to one repository, so a cluster adds cost without adding capability.",
       "A resident agent also satisfies this milestone: `deploy/<agent>.yaml` beside a dotagents payload is the evidence. The rung asks for an agent triggered from CI or a cluster, and a cluster counts.",
       "A forge coding agent also satisfies this milestone. `copilot-setup-steps.yml` in the CI directory is the evidence, although it does not satisfy the smoke test.",
+    ],
+  },
+  "agent-review": {
+    title: "Run automated pull-request review",
+    how: [
+      "Add a pull-request review workflow in the forge workflow directory.",
+      "Use a conventional name such as `pr-review.yml`, `code-review.yml`, or `review-undrafted-pr.yml` so the deterministic scan can recognize it.",
+      "If an existing custom-named workflow already performs review, prepare an agent review in Link and submit concrete job and step evidence for human acceptance.",
     ],
   },
   "protected-landing": {
@@ -770,6 +796,11 @@ function orgMilestones(
     (r) =>
       r.signals.agent_workflows.some((w) => !/triage/i.test(w)) || r.signals.copilot_agent,
   );
+  const reviewAutomation = ranked.filter((r) =>
+    r.signals.agent_workflows.some(
+      (workflow) => REVIEW_WORKFLOW.test(workflow) && REVIEW_QUALIFIER.test(workflow),
+    ),
+  );
   const unprotectedLanding = changeLanding.filter(
     (r) => !r.baseline.some((c) => c.rule === "branch-protection" && c.status === "pass"),
   );
@@ -867,6 +898,17 @@ function orgMilestones(
               )
               .join("; ")
           : "no agent triggered from CI or a cluster, and no forge coding agent",
+    },
+    {
+      id: "agent-review",
+      title: "automated pull-request review",
+      status: reviewAutomation.length > 0 ? "met" : "unmet",
+      evidence:
+        reviewAutomation.length > 0
+          ? reviewAutomation
+              .map((repo) => `${repo.name}: ${repo.signals.agent_workflows.filter((workflow) => REVIEW_WORKFLOW.test(workflow) && REVIEW_QUALIFIER.test(workflow)).join(", ")}`)
+              .join("; ")
+          : "no conventionally named automated review workflow was recognized; custom implementations require reviewed evidence",
     },
     {
       id: "protected-landing",
@@ -1733,6 +1775,25 @@ export async function runReport(argv: string[]): Promise<number> {
   const body = JSON.stringify(report, null, 2) + "\n";
   mkdirSync(outDir, { recursive: true });
   mkdirSync(XDG_DATA, { recursive: true });
+  const scope = safeScope(report);
+  const scan = scanIdentity(report);
+  const scanDir = join(XDG_DATA, "scans", scope, scan.id);
+  mkdirSync(scanDir, { recursive: true });
+  await writeFile(join(scanDir, "report.json"), body);
+  await writeFile(
+    join(scanDir, "scan.json"),
+    JSON.stringify(
+      {
+        version: "scan/v1",
+        scan_id: scan.id,
+        fingerprint: scan.fingerprint,
+        scope,
+        generated_at: report.generated_at,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
   await writeFile(join(outDir, "report.json"), body);
   await writeFile(join(XDG_DATA, "report.json"), body);
   // `link web` renders /workflows from this, so it goes everywhere the report
@@ -1755,6 +1816,8 @@ export async function runReport(argv: string[]): Promise<number> {
       `${org.org} [${org.source_type}]: level ${org.org_level} (${org.org_level_name}), ${org.repos.length} repos, smoketest ${smoke?.status}`,
     );
   }
-  console.log(`wrote ${join(outDir, "report.json")} (+ ${join(XDG_DATA, "report.json")})`);
+  console.log(
+    `wrote ${join(outDir, "report.json")} (+ ${join(XDG_DATA, "report.json")}; history ${scanDir})`,
+  );
   return 0;
 }

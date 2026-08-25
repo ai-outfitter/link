@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-outfitter.github.io/link/spec/reviewed-evidence.v1.schema.json",
+  "title": "Link reviewed evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "source_scan", "scope", "claims", "unresolved_questions", "evidence_limits"],
+  "properties": {
+    "version": { "const": "reviewed-evidence/v1" },
+    "source_scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "fingerprint", "generated_at"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["organization", "repositories"],
+      "properties": {
+        "organization": { "type": "string", "minLength": 1 },
+        "repositories": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target", "scanner_status", "proposed_status", "disposition", "confidence", "rationale", "evidence"],
+        "properties": {
+          "target": { "type": "string", "minLength": 1 },
+          "scanner_status": { "enum": ["met", "unmet", "unknown"] },
+          "proposed_status": { "enum": ["met", "unmet", "unknown"] },
+          "disposition": { "enum": ["confirm", "challenge", "supplement"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "evidence": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["source_type", "repository", "observation"],
+              "properties": {
+                "source_type": { "enum": ["local-file", "github-file", "github-api", "github-ruleset", "github-run", "url"] },
+                "repository": { "type": "string", "minLength": 1 },
+                "path": { "type": "string", "minLength": 1 },
+                "url": { "type": "string", "format": "uri" },
+                "locator": { "type": "string", "minLength": 1 },
+                "observation": { "type": "string", "minLength": 1 }
+              },
+              "anyOf": [{ "required": ["path"] }, { "required": ["url"] }, { "required": ["locator"] }]
+            }
+          }
+        }
+      }
+    },
+    "unresolved_questions": { "type": "array", "items": { "type": "string" } },
+    "evidence_limits": { "type": "array", "items": { "type": "string" } }
+  }
+}
