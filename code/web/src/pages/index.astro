@@ -2,12 +2,14 @@
 import Base from "../layouts/Base.astro";
 import RepoTable from "../components/RepoTable.astro";
 import { loadReport, loadSources } from "../lib/server-data.ts";
+import { listHistory } from "../lib/reviews.ts";
 import "../styles/report.css";
 
 export const prerender = false;
 
 const report = loadReport();
 const sources = loadSources();
+const history = listHistory();
 
 const LEVEL_NAMES = [
   "none",
@@ -69,6 +71,21 @@ const planBands = (steps: any[]) => {
   </section>
   <script src="../scripts/sources.ts"></script>
 
+  {history.length > 0 && (
+    <section class="review-panel" data-history={JSON.stringify(history)}>
+      <div>
+        <span class="eyebrow">Agent review</span>
+        <h2>Find evidence the scanner missed</h2>
+        <p class="dim">Prepare a read-only local command. Link never launches the agent, and no claim changes the score before you accept it.</p>
+      </div>
+      <label>Scan <select id="review-scan">{history.map((scan) => <option value={`${scan.scope}|${scan.scan_id}`}>{scan.scope} · {scan.generated_at}</option>)}</select></label>
+      <button id="prepare-review" type="button">Prepare agent review</button>
+      <span id="review-status" class="dim"></span>
+      <div id="review-workspace" hidden></div>
+    </section>
+  )}
+  <script src="../scripts/reviews.ts"></script>
+
   {!report && (
     <section class="card">
       <h2 style="margin-top:0">No report yet</h2>
@@ -125,6 +142,11 @@ const planBands = (steps: any[]) => {
               </>
             )}
           </p>
+
+          <div class="score-summary">
+            <div><span>Scanner</span><strong>{org.org_level}</strong><small>{org.org_level_name}</small></div>
+            <div><span>Reviewed</span><strong data-reviewed-score={org.org}>{org.org_level}</strong><small>no accepted changes</small></div>
+          </div>
 
           <ul class="milestones">
             {org.milestones.map((m) => (
@@ -197,7 +219,10 @@ const planBands = (steps: any[]) => {
             </>
           )}
 
-          <RepoTable repos={ranked} />
+          <details class="evidence-detail">
+            <summary>Detailed repository evidence ({ranked.length})</summary>
+            <RepoTable repos={ranked} />
+          </details>
 
           {unranked.length > 0 && (
             <details class="inactive">
@@ -224,4 +249,3 @@ const planBands = (steps: any[]) => {
     </>
   )}
 </Base>
-

@@ -13,7 +13,8 @@
   --terminal: #5fc98f;
   --fail: #d0685f;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
-  --display: "Instrument Serif", Georgia, serif;
+  --display: Inter, ui-sans-serif, system-ui, sans-serif;
+  --sans: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -25,14 +26,11 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--text);
-  background:
-    radial-gradient(1100px 500px at 75% -10%, #14204011 0%, transparent 60%),
-    repeating-linear-gradient(0deg, transparent 0 27px, #16203a55 27px 28px),
-    repeating-linear-gradient(90deg, transparent 0 27px, #16203a55 27px 28px),
-    var(--bg);
-  font: 400 13.5px/1.6 var(--mono);
+  background: var(--bg);
+  font: 400 15px/1.55 var(--sans);
   padding: 0 clamp(1rem, 4vw, 3rem) 3rem;
 }
+html, body { max-width: 100%; overflow-x: hidden; }
 main {
   max-width: 68rem;
   margin: 0 auto;
@@ -46,6 +44,11 @@ nav {
   padding: 1.1rem 0 1rem;
   border-bottom: 1px solid var(--line);
   margin-bottom: 2rem;
+}
+@media (max-width: 460px) {
+  nav { gap: .9rem; }
+  nav .rule { display: none; }
+  nav a { font-size: .66rem; }
 }
 .wordmark {
   font: 400 1.55rem/1 var(--display);
@@ -149,22 +152,14 @@ th {
   border-color: var(--faint);
 }
 section.card {
-  background: linear-gradient(180deg, var(--panel-2), var(--panel));
-  border: 1px solid var(--line);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
   padding: 1.4rem 1.6rem 1.2rem;
   margin: 1.4rem 0 2.2rem;
   position: relative;
 }
-section.card::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border: 1px solid var(--hairline);
-  pointer-events: none;
-}
-section.card > * {
-  position: relative;
-}
+button, input, select { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 details summary {
   cursor: pointer;
   color: var(--dim);
