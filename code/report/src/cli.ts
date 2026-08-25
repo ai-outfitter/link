@@ -52,7 +52,11 @@ async function web(): Promise<number> {
   if (bundled && existsSync(bundled)) {
     const port = process.env.PORT ?? "4321";
     const host = process.env.LINK_HOST ?? "127.0.0.1";
-    if (!["127.0.0.1", "localhost", "::1"].includes(host) && !process.env.LINK_ACCESS_TOKEN) {
+    if (
+      !["127.0.0.1", "localhost", "::1"].includes(host) &&
+      process.env.LINK_TRUST_NETWORK !== "1" &&
+      !process.env.LINK_ACCESS_TOKEN
+    ) {
       console.error("non-loopback serving requires LINK_ACCESS_TOKEN");
       return 2;
     }
