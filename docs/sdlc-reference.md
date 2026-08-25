@@ -160,8 +160,9 @@ them.
 1. Add this catalog as a pinned source and `outfitter sync`.
 2. Run an agent: `outfitter run sdlc-planner` — value with zero new
    machinery.
-3. Point `sdlc-report` at your org with `governance/sdlc-baseline.yaml` as
-   the baseline; treat its gaps as the backlog.
+3. Run `link review <org>` and treat its next reachable rung as the backlog.
+   Prepare a semantic agent review in Link when custom evidence needs deeper
+   inspection; `sdlc-report` is an optional reusable reviewer implementation.
 4. Copy a workflow into your org catalog under the same id and edit the
    data. Same-id layer precedence does the rest.
 

@@ -1,11 +1,12 @@
 # Reference git-forge governance policy for repositories that run agent
 # workflows.
 #
-# Status: readable today. sdlc-report can diff repositories against this
-# policy (read-only conformance); an apply/converge command comes later.
+# Status: readable today. Link scans repositories against this policy and can
+# collect separately reviewed evidence for scanner gaps. An apply/converge
+# command comes later.
 #
 # Adoption ramp: ship in `warn` mode first — runs proceed, non-conformance is
-# recorded, and successive sdlc-reports show the warn fraction falling. Flip
+# recorded, and successive Link scans show the warn fraction falling. Flip
 # `enforcement: strict` per cohort once conformance holds. Effective
 # strictness only ratchets up.
 #

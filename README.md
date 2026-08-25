@@ -23,8 +23,9 @@ npx @ai-outfitter/link review <org>/<repo> # one repository
 is what you wanted both times. `report` does the scan alone, for scripts and
 CI, and `web` serves the last one without rescanning.
 
-Either way the scan writes `report.json` to the working directory, plus a
-copy in `$XDG_DATA_HOME/outfitter-link/`. `--out <dir>` puts it somewhere
+Either way the scan writes `report.json` to the working directory, keeps the
+latest compatibility copy in `$XDG_DATA_HOME/outfitter-link/`, and preserves
+an immutable snapshot under `scans/<scope>/<scan-id>/`. `--out <dir>` puts it somewhere
 else and creates the directory — how the onboarding runbook files a dated
 baseline into an org's `.agents` catalog:
 
@@ -54,7 +55,8 @@ report too — the container is a complete path with no toolchain on the host.
 `review` is its default command, so one run scans and then serves:
 
 ```sh
-docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" -p 4321:4321 \
+docker run --rm -e GH_TOKEN="$(gh auth token)" -e LINK_HOST=0.0.0.0 \
+  -e LINK_ACCESS_TOKEN="$(openssl rand -hex 24)" -v "$PWD:/work" -p 4321:4321 \
   ghcr.io/ai-outfitter/link:1 review my-org
 ```
 
@@ -78,6 +80,26 @@ against, rule by rule, and marks which rules a forge scan can measure. The
 report page manages sources directly: add a GitHub org or a local folder in
 the form and rescan — the same XDG registry the CLI uses, and the same
 scanner, run for you.
+
+It binds to loopback by default. A container or remote bind MUST set
+`LINK_HOST` explicitly and MUST supply `LINK_ACCESS_TOKEN` on requests.
+
+### Reviewed evidence
+
+The scanner remains deterministic. When a custom implementation does not use
+a filename the scanner recognizes, select a preserved scan and choose
+**Prepare agent review**. Link writes `prompt.md`, the strict
+`reviewed-evidence/v1` schema, and the expected `result.json` path beneath that
+scan, then displays copy-paste commands for Claude Code, Codex, Pi through
+Outfitter, and a prompt-only fallback. Link never launches an agent.
+
+The result loader rejects prose, fenced JSON, stale scan fingerprints,
+duplicate or unknown milestone targets, and malformed evidence. Each claim
+remains pending until a person accepts or rejects it. Accepted claims recompute
+a separate reviewed score; `report.json` and the scanner score never change. A
+new scan starts with no accepted annotations, while prior reviews remain in
+history. The `sdlc-report` skill is an optional reusable implementation of this
+semantic review, not the assessment entry point.
 
 The policy travels inside `report.json`, so a report filed into an org's
 `.agents` catalog can still be read against the rules it was scored under
@@ -117,6 +139,10 @@ self-hosted harness in its own CI, or a resident agent with `deploy/`
 manifests? SaaS coding agents (Copilot, vendor apps) are excluded by
 definition; being able to assign work to an agent whose destiny you control
 is the capability everything else builds on.
+
+Level 3 includes `agent-review`: conventionally named pull-request review
+workflows are detected deterministically, while custom-named implementations
+can be credited only through accepted reviewed evidence.
 
 Every org report ends in a ranked **plan**, not a grade. `next_steps[]`
 lists what to do, ordered by the rung each step reaches: the smoke test

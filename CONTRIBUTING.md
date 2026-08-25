@@ -131,7 +131,8 @@ exist, and CI's consumer test already runs `npm pack`.
 ```sh
 docker build -t link:dev .
 docker run --rm -e GH_TOKEN="$(gh auth token)" -v "$PWD:/work" link:dev report <org>
-docker run --rm -v "$PWD:/work" -p 4321:4321 link:dev web
+docker run --rm -e LINK_HOST=0.0.0.0 -e LINK_ACCESS_TOKEN="$(openssl rand -hex 24)" \
+  -v "$PWD:/work" -p 4321:4321 link:dev web
 ```
 
 The image carries `gh` and `git` because the scanner shells out to both; node
@@ -142,9 +143,9 @@ It also carries the prebuilt site, because the container is the no-toolchain
 path: someone who chose it to avoid installing node has no other way to see
 what they generated. Two consequences worth knowing:
 
-- **`ENV HOST=0.0.0.0`.** The Astro node adapter binds to `localhost` unless
-  told otherwise, which inside a container means nothing outside it can
-  connect — the published port forwards to an address with no listener.
+- **Remote binding is explicit.** The site binds to loopback by default.
+  Containers set `LINK_HOST=0.0.0.0` and an access token at run time; the image
+  does not silently expose a mutation-capable control surface.
 - **The site reads the working directory as well as XDG.** A container's XDG
   copy dies with the container, so after `docker run … report` the mounted
   `/work/report.json` is the only copy the next `docker run … web` can see.
@@ -163,6 +164,7 @@ rather than a guarantee.
 npm run typecheck
 npm run build
 npm run test:evidence                          # evidence-backend fixtures
+npm run test:reviews                           # reviewed-evidence contract and scoring
 npm pack                                       # inspect the tarball contents
 docker build -t link:dev .
 ```
