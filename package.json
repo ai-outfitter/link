@@ -20,6 +20,25 @@
   "bin": {
     "link": "dist/cli.js"
   },
+  "exports": {
+    ".": "./dist/cli.js",
+    "./schema": {
+      "types": "./dist/core/schema.d.ts",
+      "default": "./dist/core/schema.js"
+    },
+    "./octokit": {
+      "types": "./dist/core/octokit.d.ts",
+      "default": "./dist/core/octokit.js"
+    },
+    "./core": {
+      "types": "./dist/core/core.d.ts",
+      "default": "./dist/core/core.js"
+    },
+    "./testing": {
+      "types": "./dist/core/testing.d.ts",
+      "default": "./dist/core/testing.js"
+    }
+  },
   "files": [
     "dist",
     "dist-web",
@@ -35,11 +54,11 @@
     "node": ">=20.19.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.core.json",
     "build:web": "node scripts/build-web.mjs",
     "prepare": "npm run build",
     "prepack": "npm run build && npm run build:web",
-    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.core.json --noEmit",
     "report": "node dist/cli.js report",
     "test:evidence": "node scripts/test-evidence.mjs",
     "test:sources": "node scripts/test-sources.mjs"
