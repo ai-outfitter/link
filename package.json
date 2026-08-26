@@ -61,8 +61,10 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.core.json --noEmit",
     "report": "node dist/cli.js report",
     "test:evidence": "node scripts/test-evidence.mjs",
-    "test:sources": "node scripts/test-sources.mjs"
-    ,"test:reviews": "node scripts/test-reviews.mjs"
+    "test:sources": "node scripts/test-sources.mjs",
+    "test:reviews": "node scripts/test-reviews.mjs",
+    "test:portable": "node scripts/test-portable.mjs",
+    "test:browser": "node scripts/test-browser-bundle.mjs"
   },
   "dependencies": {
     "yaml": "^2.8.1",
