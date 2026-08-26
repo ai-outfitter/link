@@ -157,8 +157,9 @@ function unavailableObservation(
 export async function observeGitHubRepository(
   client: GitHubRequestClient, repository: GitHubRepository, options: ObservationOptions = {},
 ): Promise<RepositoryObservation> {
+  const apiRepository = { owner: repository.owner, repo: repository.name };
   let metadataData: unknown;
-  try { metadataData = (await client.request("GET /repos/{owner}/{repo}", { ...repository })).data; }
+  try { metadataData = (await client.request("GET /repos/{owner}/{repo}", apiRepository)).data; }
   catch (error) { return unavailableObservation(repository, options, "metadata", failureReason(failureFrom(error))); }
   const summary = isRecord(metadataData) ? normalizeRepository(metadataData) : null;
   if (summary === null) return unavailableObservation(repository, options, "metadata", "malformed_response");
@@ -166,7 +167,7 @@ export async function observeGitHubRepository(
   const requested = options.revision ?? summary.defaultBranch ?? "HEAD";
   let commitData: unknown;
   try {
-    commitData = (await client.request("GET /repos/{owner}/{repo}/commits/{ref}", { ...repository, ref: requested })).data;
+    commitData = (await client.request("GET /repos/{owner}/{repo}/commits/{ref}", { ...apiRepository, ref: requested })).data;
   } catch (error) {
     return unavailableObservation(repository, options, "revision", failureReason(failureFrom(error)), summary);
   }
@@ -189,7 +190,7 @@ export async function observeGitHubRepository(
     let treeData: unknown;
     try {
       treeData = (await client.request("GET /repos/{owner}/{repo}/git/trees/{tree_sha}", {
-        ...repository, tree_sha: current.sha,
+        ...apiRepository, tree_sha: current.sha,
       })).data;
     } catch (error) { manifestReasons.add(failureReason(failureFrom(error))); continue; }
     const tree = parseTree(treeData);
@@ -217,7 +218,7 @@ export async function observeGitHubRepository(
   for (const artifact of artifacts) {
     try {
       const data = (await client.request("GET /repos/{owner}/{repo}/contents/{path}", {
-        ...repository, path: artifact.path, ref: resolved,
+        ...apiRepository, path: artifact.path, ref: resolved,
       })).data;
       if (!isRecord(data) || data.type !== "file") contentReasons.add("malformed_response");
       else if (data.truncated === true || data.content === undefined) {

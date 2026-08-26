@@ -16,6 +16,11 @@ assert.deepEqual(installation.repositories, inventory.repositories, "scope shape
 
 const observationClient = createObservationFixtureClient();
 const observation = await observeGitHubRepository(observationClient, { owner: "acme", name: "widget" });
+for (const call of observationClient.calls.filter((entry) => entry.route.startsWith("GET /repos/{owner}/{repo}"))) {
+  assert.equal(call.parameters.owner, "acme", "repository requests must use the normalized owner");
+  assert.equal(call.parameters.repo, "widget", "repository requests must map normalized name to Octokit's repo parameter");
+  assert(!("name" in call.parameters), "normalized repository name must not leak into Octokit route parameters");
+}
 assert.deepEqual(observation.artifacts.map((artifact) => artifact.path), [
   ".agents/settings.yml", ".github/CODEOWNERS", ".github/workflows/custom-review.yml", "AGENTS.md",
   "agents/reviewer/agent.md",
