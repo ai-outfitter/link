@@ -13,6 +13,8 @@ assert.equal(assessment.rungs[4].status, "unavailable");
 assert.match(assessment.limitations[0], /installation-scope/);
 assert.equal(assessment.repositories[0].capabilities.find(({ capability }) => capability === "automated-review").state, "detected");
 assert.equal(assessment.repositories[0].capabilities.find(({ capability }) => capability === "automated-review").requiredState, "exercised");
+assert.equal(assessment.repositories[0].capabilities.find(({ capability }) => capability === "automated-review").title, "Exercised automated review");
+assert.match(assessment.repositories[0].capabilities.find(({ capability }) => capability === "automated-review").nextAction, /real change/);
 
 const reversed = structuredClone(observation);
 reversed.artifacts.reverse(); reversed.evidence.reverse();

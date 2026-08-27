@@ -89,8 +89,8 @@ export const READINESS_MODEL_VERSION = "readiness-model/v1alpha1" as const;
 export type EvidenceState = "unknown" | "declared" | "detected" | "enforced" | "exercised" | "verified";
 export type ReadinessDimension = "context" | "workflow" | "identity-and-authority" | "guardrails" | "auditability" | "improvement";
 export type CapabilityId = "repository-context" | "accountable-ownership" | "shared-agent-context" | "named-workflow-responsibility" | "agent-identity" | "scoped-authority" | "automated-agent-workflow" | "automated-review" | "controlled-change-landing";
-export interface CapabilityDefinition { id: CapabilityId; dimension: ReadinessDimension; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; title: string }
-export interface CapabilityAssessment { capability: CapabilityId; dimension: ReadinessDimension; state: EvidenceState; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; evidence: EvidenceLocator[]; limitations: string[] }
+export interface CapabilityDefinition { id: CapabilityId; dimension: ReadinessDimension; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; title: string; description: string; nextAction: string }
+export interface CapabilityAssessment { capability: CapabilityId; title: string; description: string; nextAction: string; dimension: ReadinessDimension; state: EvidenceState; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; evidence: EvidenceLocator[]; limitations: string[] }
 export interface RepositoryReadinessAssessment { repository: RepositorySummary; revision: RepositoryObservation["revision"]; capabilities: CapabilityAssessment[]; coverage: CoverageRecord[]; rung: 0 | 1 | 2 | 3 }
 export interface RungAssessment { rung: 0 | 1 | 2 | 3 | 4 | 5; name: string; status: "satisfied" | "not-satisfied" | "unavailable"; missingCapabilities: CapabilityId[] }
 export interface DimensionAssessment { dimension: ReadinessDimension; state: EvidenceState; capabilities: CapabilityId[] }
