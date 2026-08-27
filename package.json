@@ -64,6 +64,7 @@
     "test:sources": "node scripts/test-sources.mjs",
     "test:reviews": "node scripts/test-reviews.mjs",
     "test:portable": "node scripts/test-portable.mjs",
+    "test:assessment": "node scripts/test-assessment.mjs",
     "test:browser": "node scripts/test-browser-bundle.mjs"
   },
   "dependencies": {

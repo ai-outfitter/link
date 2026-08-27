@@ -84,3 +84,19 @@ export interface GitHubResponse<T = unknown> {
 export interface GitHubRequestClient {
   request<T = unknown>(route: string, parameters?: Record<string, unknown>): Promise<GitHubResponse<T>>;
 }
+
+export const READINESS_MODEL_VERSION = "readiness-model/v1alpha1" as const;
+export type EvidenceState = "unknown" | "declared" | "detected" | "enforced" | "exercised" | "verified";
+export type ReadinessDimension = "context" | "workflow" | "identity-and-authority" | "guardrails" | "auditability" | "improvement";
+export type CapabilityId = "repository-context" | "accountable-ownership" | "shared-agent-context" | "named-workflow-responsibility" | "agent-identity" | "scoped-authority" | "automated-agent-workflow" | "automated-review" | "controlled-change-landing";
+export interface CapabilityDefinition { id: CapabilityId; dimension: ReadinessDimension; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; title: string }
+export interface CapabilityAssessment { capability: CapabilityId; dimension: ReadinessDimension; state: EvidenceState; requiredForRung: 1 | 2 | 3; requiredState: EvidenceState; evidence: EvidenceLocator[]; limitations: string[] }
+export interface RepositoryReadinessAssessment { repository: RepositorySummary; revision: RepositoryObservation["revision"]; capabilities: CapabilityAssessment[]; coverage: CoverageRecord[]; rung: 0 | 1 | 2 | 3 }
+export interface RungAssessment { rung: 0 | 1 | 2 | 3 | 4 | 5; name: string; status: "satisfied" | "not-satisfied" | "unavailable"; missingCapabilities: CapabilityId[] }
+export interface DimensionAssessment { dimension: ReadinessDimension; state: EvidenceState; capabilities: CapabilityId[] }
+export interface ReadinessAssessment {
+  model: typeof READINESS_MODEL_VERSION; generatedAt: string; scope: GitHubScope; scopeLabel: "organization" | "installation";
+  repositories: RepositoryReadinessAssessment[]; dimensions: DimensionAssessment[]; rungs: RungAssessment[];
+  currentRung: 0 | 1 | 2 | 3; reviewedRung: null; coverage: CoverageRecord[]; limitations: string[];
+}
+export interface AssessmentOptions { generatedAt?: string }
